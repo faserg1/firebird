@@ -687,6 +687,12 @@ public:
 		unsigned year, unsigned month, unsigned day,
 		unsigned hours, unsigned minutes, unsigned seconds, unsigned fractions, const char* timeZone);
 	Firebird::IInt128* getInt128(Firebird::CheckStatusWrapper* status);
+	void decodeTimeTzEx(Firebird::CheckStatusWrapper* status, const ISC_TIME_TZ_EX* timeEx,
+		unsigned* hours, unsigned* minutes, unsigned* seconds, unsigned* fractions,
+		unsigned timeZoneBufferLength, char* timeZoneBuffer);
+	void decodeTimeStampTzEx(Firebird::CheckStatusWrapper* status, const ISC_TIMESTAMP_TZ_EX* timeStampEx,
+		unsigned* year, unsigned* month, unsigned* day, unsigned* hours, unsigned* minutes, unsigned* seconds,
+		unsigned* fractions, unsigned timeZoneBufferLength, char* timeZoneBuffer);
 };
 
 }	// namespace Why

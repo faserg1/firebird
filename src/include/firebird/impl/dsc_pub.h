@@ -66,7 +66,9 @@
 #define dtype_int128	24
 #define dtype_sql_time_tz	25
 #define dtype_timestamp_tz	26
-#define DTYPE_TYPE_MAX	27
+#define dtype_ex_time_tz	27
+#define dtype_ex_tstamp_tz	28
+#define DTYPE_TYPE_MAX	29
 
 #define ISC_TIME_SECONDS_PRECISION		10000
 #define ISC_TIME_SECONDS_PRECISION_SCALE	(-4)

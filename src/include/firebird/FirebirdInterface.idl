@@ -32,6 +32,8 @@ typedef ISC_TIME;
 typedef ISC_TIMESTAMP;
 typedef ISC_TIME_TZ;
 typedef ISC_TIMESTAMP_TZ;
+typedef ISC_TIME_TZ_EX;
+typedef ISC_TIMESTAMP_TZ_EX;
 typedef FB_DEC16;
 typedef FB_DEC34;
 typedef FB_I128;
@@ -1114,6 +1116,10 @@ version:	// 3.0 => 4.0 Alpha1
 
 version:	// 4.0 Beta1 => 4.0 Beta2
 	Int128 getInt128(Status status);
+	void decodeTimeTzEx(Status status, const ISC_TIME_TZ_EX* timeTz, uint* hours, uint* minutes, uint* seconds,
+		uint* fractions, uint timeZoneBufferLength, string timeZoneBuffer);
+	void decodeTimeStampTzEx(Status status, const ISC_TIMESTAMP_TZ_EX* timeStampTz, uint* year, uint* month, uint* day,
+		uint* hours, uint* minutes, uint* seconds, uint* fractions, uint timeZoneBufferLength, string timeZoneBuffer);
 }
 
 interface OffsetsCallback : Versioned

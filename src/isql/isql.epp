@@ -7527,12 +7527,21 @@ static unsigned print_item(TEXT** s, const IsqlVar* var, const unsigned length)
 			}
 
 		case SQL_TIMESTAMP_TZ:
+		case SQL_TIMESTAMP_TZ_EX:
 			{
 				unsigned year, month, day, hours, minutes, seconds, fractions;
 				char timeZone[TimeZoneUtil::MAX_SIZE];
 
-				Firebird::UtilInterfacePtr()->decodeTimeStampTz(fbStatus, var->value.asDateTimeTz,
-					&year, &month, &day, &hours, &minutes, &seconds, &fractions, sizeof(timeZone), timeZone);
+				if (dtype == SQL_TIMESTAMP_TZ)
+				{
+					Firebird::UtilInterfacePtr()->decodeTimeStampTz(fbStatus, var->value.asDateTimeTz,
+						&year, &month, &day, &hours, &minutes, &seconds, &fractions, sizeof(timeZone), timeZone);
+				}
+				else
+				{
+					Firebird::UtilInterfacePtr()->decodeTimeStampTzEx(fbStatus, var->value.asDateTimeEx,
+						&year, &month, &day, &hours, &minutes, &seconds, &fractions, sizeof(timeZone), timeZone);
+				}
 
 				if (ISQL_errmsg(fbStatus))
 					return ps_ERR;
@@ -7566,12 +7575,21 @@ static unsigned print_item(TEXT** s, const IsqlVar* var, const unsigned length)
 			}
 
 		case SQL_TIME_TZ:
+		case SQL_TIME_TZ_EX:
 			{
 				unsigned hours, minutes, seconds, fractions;
 				char timeZone[TimeZoneUtil::MAX_SIZE];
 
-				Firebird::UtilInterfacePtr()->decodeTimeTz(fbStatus, var->value.asTimeTz, &hours, &minutes, &seconds,
-					&fractions, sizeof(timeZone), timeZone);
+				if (dtype == SQL_TIME_TZ)
+				{
+					Firebird::UtilInterfacePtr()->decodeTimeTz(fbStatus, var->value.asTimeTz, &hours, &minutes, &seconds,
+						&fractions, sizeof(timeZone), timeZone);
+				}
+				else
+				{
+					Firebird::UtilInterfacePtr()->decodeTimeTzEx(fbStatus, var->value.asTimeEx, &hours, &minutes, &seconds,
+						&fractions, sizeof(timeZone), timeZone);
+				}
 
 				if (ISQL_errmsg(fbStatus))
 					return ps_ERR;
@@ -8241,12 +8259,14 @@ static unsigned process_message_display(Firebird::IMessageMetadata* message, uns
 				disp_length = DATE_ONLY_LEN;
 			break;
 		case SQL_TIMESTAMP_TZ:
+		case SQL_TIMESTAMP_TZ_EX:
 			disp_length = DATETIME_TZ_LEN;
 			break;
 		case SQL_TYPE_TIME:
 			disp_length = TIME_ONLY_LEN;
 			break;
 		case SQL_TIME_TZ:
+		case SQL_TIME_TZ_EX:
 			disp_length = TIME_TZ_ONLY_LEN;
 			break;
 		case SQL_TYPE_DATE:

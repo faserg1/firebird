@@ -354,6 +354,8 @@ private:
 		return clause.hasData();
 	}
 
+	void checkTimeDialect();
+
 // start - defined in btyacc_fb.ske
 private:
 	static void yySCopy(YYSTYPE* to, YYSTYPE* from, int size);

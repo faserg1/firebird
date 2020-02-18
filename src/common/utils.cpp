@@ -1554,6 +1554,10 @@ UCHAR sqlTypeToDscType(SSHORT sqlType)
 		return dtype_sql_time_tz;
 	case SQL_TIMESTAMP_TZ:
 		return dtype_timestamp_tz;
+	case SQL_TIME_TZ_EX:
+		return dtype_ex_time_tz;
+	case SQL_TIMESTAMP_TZ_EX:
+		return dtype_ex_tstamp_tz;
 	default:
 		return dtype_unknown;
 	}

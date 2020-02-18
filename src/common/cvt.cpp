@@ -1533,6 +1533,7 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 	// Do data type by data type conversions.  Not all are supported,
 	// and some will drop out for additional handling.
 
+	dsc d;
 	switch (to->dsc_dtype)
 	{
 	case dtype_timestamp:
@@ -1560,11 +1561,13 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			return;
 
 		case dtype_sql_time_tz:
+		case dtype_ex_time_tz:
 			*(ISC_TIMESTAMP*) to->dsc_address =
 				TimeZoneUtil::cvtTimeTzToTimeStamp(*(ISC_TIME_TZ*) from->dsc_address, cb);
 			return;
 
 		case dtype_timestamp_tz:
+		case dtype_ex_tstamp_tz:
 			*(ISC_TIMESTAMP*) to->dsc_address =
 				TimeZoneUtil::cvtTimeStampTzToTimeStamp(*(ISC_TIMESTAMP_TZ*) from->dsc_address, cb);
 			return;
@@ -1574,6 +1577,20 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			break;
 		}
 		break;
+
+	case dtype_ex_tstamp_tz:
+		d.makeTimestampTz((ISC_TIMESTAMP_TZ*)(to->dsc_address));
+		CVT_move_common(from, &d, decSt, cb);
+		TimeZoneUtil::extractOffset(*(ISC_TIMESTAMP_TZ*)(to->dsc_address),
+			&((ISC_TIMESTAMP_TZ_EX*)(to->dsc_address))->ext_offset);
+		return;
+
+	case dtype_ex_time_tz:
+		d.makeTimeTz((ISC_TIME_TZ*)(to->dsc_address));
+		CVT_move_common(from, &d, decSt, cb);
+		TimeZoneUtil::extractOffset(TimeZoneUtil::cvtTimeTzToTimeStampTz(*(ISC_TIME_TZ*)(to->dsc_address), cb),
+			&((ISC_TIME_TZ_EX*)(to->dsc_address))->ext_offset);
+		return;
 
 	case dtype_timestamp_tz:
 		switch (from->dsc_dtype)
@@ -1593,6 +1610,7 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 				TimeZoneUtil::cvtTimeToTimeStampTz(*(ISC_TIME*) from->dsc_address, cb);
 			return;
 
+		case dtype_ex_time_tz:
 		case dtype_sql_time_tz:
 			*((ISC_TIMESTAMP_TZ*) to->dsc_address) =
 				TimeZoneUtil::cvtTimeTzToTimeStampTz(*(ISC_TIME_TZ*) from->dsc_address, cb);
@@ -1632,6 +1650,7 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			return;
 
 		case dtype_timestamp_tz:
+		case dtype_ex_tstamp_tz:
 			*(GDS_DATE*) to->dsc_address =
 				TimeZoneUtil::cvtTimeStampTzToTimeStamp(*(ISC_TIMESTAMP_TZ*) from->dsc_address, cb).timestamp_date;
 			return;
@@ -1656,6 +1675,7 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			return;
 
 		case dtype_sql_time_tz:
+		case dtype_ex_time_tz:
 			*(ISC_TIME*) to->dsc_address = TimeZoneUtil::cvtTimeTzToTime(*(ISC_TIME_TZ*) from->dsc_address, cb);
 			return;
 
@@ -1664,6 +1684,7 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			return;
 
 		case dtype_timestamp_tz:
+		case dtype_ex_tstamp_tz:
 			*(GDS_TIME*) to->dsc_address =
 				TimeZoneUtil::cvtTimeStampTzToTimeStamp(*(ISC_TIMESTAMP_TZ*) from->dsc_address, cb).timestamp_time;
 			return;
@@ -1698,6 +1719,7 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			return;
 
 		case dtype_timestamp_tz:
+		case dtype_ex_tstamp_tz:
 			*(ISC_TIME_TZ*) to->dsc_address =
 				TimeZoneUtil::cvtTimeStampTzToTimeTz(*(ISC_TIMESTAMP_TZ*) from->dsc_address);
 			return;
@@ -1907,8 +1929,10 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 		case dtype_sql_date:
 		case dtype_sql_time:
 		case dtype_sql_time_tz:
+		case dtype_ex_time_tz:
 		case dtype_timestamp:
 		case dtype_timestamp_tz:
+		case dtype_ex_tstamp_tz:
 			datetime_to_text(from, to, cb);
 			return;
 
@@ -2163,7 +2187,9 @@ static void datetime_to_text(const dsc* from, dsc* to, Callbacks* cb)
 		break;
 
 	case dtype_sql_time_tz:
-		tzLookup = TimeZoneUtil::decodeTime(*(ISC_TIME_TZ*) from->dsc_address, true, cb, &times, &fractions);
+	case dtype_ex_time_tz:
+		tzLookup = TimeZoneUtil::decodeTime(*(ISC_TIME_TZ*) from->dsc_address,
+			true, TimeZoneUtil::NO_OFFSET, cb, &times, &fractions);
 		timezone = ((ISC_TIME_TZ*) from->dsc_address)->time_zone;
 		break;
 
@@ -2177,8 +2203,10 @@ static void datetime_to_text(const dsc* from, dsc* to, Callbacks* cb)
 		break;
 
 	case dtype_timestamp_tz:
+	case dtype_ex_tstamp_tz:
 		cb->isVersion4(version4); // Used in the conversion to text some lines below.
-		tzLookup = TimeZoneUtil::decodeTimeStamp(*(ISC_TIMESTAMP_TZ*) from->dsc_address, true, &times, &fractions);
+		tzLookup = TimeZoneUtil::decodeTimeStamp(*(ISC_TIMESTAMP_TZ*) from->dsc_address,
+			true, TimeZoneUtil::NO_OFFSET, &times, &fractions);
 		timezone = ((ISC_TIMESTAMP_TZ*) from->dsc_address)->time_zone;
 		break;
 
@@ -2196,7 +2224,7 @@ static void datetime_to_text(const dsc* from, dsc* to, Callbacks* cb)
 
 	// Make a textual date for data types that include it
 
-	if (from->dsc_dtype != dtype_sql_time && from->dsc_dtype != dtype_sql_time_tz)
+	if (!from->isTime())
 	{
 		if (from->dsc_dtype == dtype_sql_date || !version4)
 		{
@@ -2217,14 +2245,14 @@ static void datetime_to_text(const dsc* from, dsc* to, Callbacks* cb)
 
 	// Put in a space to separate date & time components
 
-	if ((from->dsc_dtype == dtype_timestamp || from->dsc_dtype == dtype_timestamp_tz) && !version4)
+	if (from->isTimeStamp() && !version4)
 		*p++ = ' ';
 
 	// Add the time part for data types that include it
 
 	if (from->dsc_dtype != dtype_sql_date)
 	{
-		if (from->dsc_dtype == dtype_sql_time || from->dsc_dtype == dtype_sql_time_tz || !version4)
+		if (from->isTime() || !version4)
 		{
 			sprintf(p, "%2.2d:%2.2d:%2.2d.%4.4d",
 					times.tm_hour, times.tm_min, times.tm_sec, fractions);
@@ -2240,16 +2268,10 @@ static void datetime_to_text(const dsc* from, dsc* to, Callbacks* cb)
 			p++;
 	}
 
-	if (from->dsc_dtype == dtype_sql_time_tz || from->dsc_dtype == dtype_timestamp_tz)
+	if (from->isDateTimeTz())
 	{
 		*p++ = ' ';
-		if (tzLookup)
-			p += TimeZoneUtil::format(p, sizeof(temp) - (p - temp), timezone);
-		else
-		{
-			strncpy(p, TimeZoneUtil::GMT_FALLBACK, sizeof(temp) - (p - temp));
-			p += strlen(TimeZoneUtil::GMT_FALLBACK);
-		}
+		p += TimeZoneUtil::format(p, sizeof(temp) - (p - temp), timezone, !tzLookup);
 	}
 
 	// Move the text version of the date/time value into the destination
@@ -2261,7 +2283,7 @@ static void datetime_to_text(const dsc* from, dsc* to, Callbacks* cb)
 	desc.dsc_ttype() = ttype_ascii;
 	desc.dsc_length = (p - temp);
 
-	if ((from->dsc_dtype == dtype_timestamp || from->dsc_dtype == dtype_timestamp_tz) && version4)
+	if (from->isTimeStamp() && version4)
 	{
 		// Prior to BLR Version5, when a timestamp is converted to a string it
 		// is silently truncated if the destination string is not large enough
@@ -3428,8 +3450,10 @@ SINT64 CVT_get_int64(const dsc* desc, SSHORT scale, DecimalStatus decSt, ErrorFu
 	case dtype_sql_date:
 	case dtype_sql_time:
 	case dtype_sql_time_tz:
+	case dtype_ex_time_tz:
 	case dtype_timestamp:
 	case dtype_timestamp_tz:
+	case dtype_ex_tstamp_tz:
 	case dtype_array:
 	case dtype_dbkey:
 	case dtype_boolean:

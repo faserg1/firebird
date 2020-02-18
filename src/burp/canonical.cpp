@@ -154,6 +154,15 @@ ULONG CAN_encode_decode(burp_rel* relation, lstring* buffer, UCHAR* data, bool d
 				return FALSE;
 			break;
 
+		case dtype_ex_time_tz:
+			if (!xdr_long(xdrs, (SLONG*) p))
+				return FALSE;
+			if (!xdr_short(xdrs, (SSHORT*) (p + sizeof(SLONG))))
+				return FALSE;
+			if (!xdr_short(xdrs, (SSHORT*) (p + sizeof(SLONG) + sizeof(SSHORT))))
+				return FALSE;
+			break;
+
 		case dtype_real:
 			if (!xdr_float(xdrs, (float*) p))
 				return FALSE;
@@ -192,6 +201,17 @@ ULONG CAN_encode_decode(burp_rel* relation, lstring* buffer, UCHAR* data, bool d
 			if (!xdr_long(xdrs, &((SLONG*) p)[1]))
 				return FALSE;
 			if (!xdr_short(xdrs, (SSHORT*) (p + sizeof(SLONG) + sizeof(SLONG))))
+				return FALSE;
+			break;
+
+		case dtype_ex_tstamp_tz:
+			if (!xdr_long(xdrs, (SLONG*) p))
+				return FALSE;
+			if (!xdr_long(xdrs, &((SLONG*) p)[1]))
+				return FALSE;
+			if (!xdr_short(xdrs, (SSHORT*) (p + sizeof(SLONG) + sizeof(SLONG))))
+				return FALSE;
+			if (!xdr_short(xdrs, (SSHORT*) (p + sizeof(SLONG) + sizeof(SLONG) + sizeof(SSHORT))))
 				return FALSE;
 			break;
 

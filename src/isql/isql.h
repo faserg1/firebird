@@ -328,6 +328,8 @@ static const sqltypes Column_types[] = {
 	{blr_int128, "INT64"},
 	{blr_sql_time_tz, "TIME WITH TIME ZONE"},		// keyword
 	{blr_timestamp_tz, "TIMESTAMP WITH TIME ZONE"},	// keyword
+	{blr_ex_time_tz, "TIME WITH TIME ZONE"},
+	{blr_ex_tstamp_tz, "TIMESTAMP WITH TIME ZONE"},
 	{0, ""}
 };
 
@@ -464,8 +466,10 @@ struct IsqlVar
 	{
 		ISC_TIMESTAMP* asDateTime;
 		ISC_TIMESTAMP_TZ* asDateTimeTz;
+		ISC_TIMESTAMP_TZ_EX* asDateTimeEx;
 		ISC_TIME* asTime;
 		ISC_TIME_TZ* asTimeTz;
+		ISC_TIME_TZ_EX* asTimeEx;
 		ISC_DATE* asDate;
 		SSHORT* asSmallint;
 		SLONG* asInteger;

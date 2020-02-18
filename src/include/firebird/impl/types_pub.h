@@ -162,6 +162,13 @@ typedef struct
 
 typedef struct
 {
+	ISC_TIME utc_time;
+	ISC_USHORT time_zone;
+	ISC_SHORT ext_offset;
+} ISC_TIME_TZ_EX;
+
+typedef struct
+{
 	ISC_DATE timestamp_date;
 	ISC_TIME timestamp_time;
 } ISC_TIMESTAMP;
@@ -171,6 +178,13 @@ typedef struct
 	ISC_TIMESTAMP utc_timestamp;
 	ISC_USHORT time_zone;
 } ISC_TIMESTAMP_TZ;
+
+typedef struct
+{
+	ISC_TIMESTAMP utc_timestamp;
+	ISC_USHORT time_zone;
+	ISC_SHORT ext_offset;
+} ISC_TIMESTAMP_TZ_EX;
 
 /*******************************************************************/
 /* Blob Id support                                                 */

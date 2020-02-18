@@ -71,11 +71,13 @@ static const USHORT gds_cvt_blr_dtype[DTYPE_BLR_MAX + 1] =
 	dtype_boolean,				// blr_bool == 23
 	dtype_dec64,				/* blr_dec64 == 24 */
 	dtype_dec128,				/* blr_dec128 == 25 */
-	dtype_int128,			/* blr_int128 == 26 */
+	dtype_int128,				/* blr_int128 == 26 */
 	dtype_double,				/* blr_double == 27 */
 	dtype_sql_time_tz,			/* blr_sql_time_tz == 28 */
 	dtype_timestamp_tz,			/* blr_timestamp_tz == 29 */
-	0, 0, 0, 0, 0,
+	dtype_ex_time_tz,			/* blr_ex_time_tz == 30 */
+	dtype_ex_tstamp_tz,			/* blr_ex_tstamp_tz == 31 */
+	0, 0, 0,
 	dtype_timestamp,			/* blr_timestamp == 35 */
 	0,
 	dtype_varying,				/* blr_varying == 37 */
@@ -114,38 +116,42 @@ static const USHORT type_alignments[DTYPE_TYPE_MAX] =
 	sizeof(Firebird::Decimal64),/* dtype_dec128 */
 	sizeof(Firebird::Decimal64),/* dtype_int128 */
 	sizeof(GDS_TIME),			/* dtype_sql_time_tz */
-	sizeof(GDS_DATE)			/* dtype_timestamp_tz */
+	sizeof(GDS_DATE),			/* dtype_timestamp_tz */
+	sizeof(GDS_TIME),			/* dtype_ex_time_tz */
+	sizeof(GDS_DATE)			/* dtype_ex_tstamp_tz */
 };
 
 static const USHORT type_lengths[DTYPE_TYPE_MAX] =
 {
 	0,
-	0,							/* dtype_text */
-	0,							/* dtype_cstring */
-	0,							/* dtype_varying */
-	0,							/* unused */
-	0,							/* unused */
-	0,							/* dtype_packed */
-	sizeof(SCHAR),				/* dtype_byte */
-	sizeof(SSHORT),				/* dtype_short */
-	sizeof(SLONG),				/* dtype_long */
-	sizeof(ISC_QUAD),			/* dtype_quad */
-	sizeof(float),				/* dtype_real */
-	sizeof(double),				/* dtype_double */
-	sizeof(double),				/* dtype_d_float */
-	sizeof(GDS_DATE),			/* dtype_sql_date */
-	sizeof(GDS_TIME),			/* dtype_sql_time */
-	sizeof(GDS_TIMESTAMP),		/* dtype_timestamp */
-	sizeof(ISC_QUAD),			/* dtype_blob */
-	sizeof(ISC_QUAD),			/* dtype_array */
-	sizeof(SINT64),				/* dtype_int64 */
-	sizeof(RecordNumber::Packed),/*dtype_dbkey */
-	sizeof(UCHAR),				/* dtype_boolean */
-	sizeof(Firebird::Decimal64),/* dtype_dec64 */
-	sizeof(Firebird::Decimal128),/*dtype_dec128 */
-	sizeof(Firebird::Int128),	/*	dtype_int128 */
+	0,								/* dtype_text */
+	0,								/* dtype_cstring */
+	0,								/* dtype_varying */
+	0,								/* unused */
+	0,								/* unused */
+	0,								/* dtype_packed */
+	sizeof(SCHAR),					/* dtype_byte */
+	sizeof(SSHORT),					/* dtype_short */
+	sizeof(SLONG),					/* dtype_long */
+	sizeof(ISC_QUAD),				/* dtype_quad */
+	sizeof(float),					/* dtype_real */
+	sizeof(double),					/* dtype_double */
+	sizeof(double),					/* dtype_d_float */
+	sizeof(GDS_DATE),				/* dtype_sql_date */
+	sizeof(GDS_TIME),				/* dtype_sql_time */
+	sizeof(GDS_TIMESTAMP),			/* dtype_timestamp */
+	sizeof(ISC_QUAD),				/* dtype_blob */
+	sizeof(ISC_QUAD),				/* dtype_array */
+	sizeof(SINT64),					/* dtype_int64 */
+	sizeof(RecordNumber::Packed),	/*dtype_dbkey */
+	sizeof(UCHAR),					/* dtype_boolean */
+	sizeof(Firebird::Decimal64),	/* dtype_dec64 */
+	sizeof(Firebird::Decimal128),	/*dtype_dec128 */
+	sizeof(Firebird::Int128),		/*	dtype_int128 */
 	sizeof(ISC_TIME_TZ),			/* dtype_sql_time_tz */
-	sizeof(ISC_TIMESTAMP_TZ)		/* dtype_timestamp_tz */
+	sizeof(ISC_TIMESTAMP_TZ),		/* dtype_timestamp_tz */
+	sizeof(ISC_TIME_TZ_EX),			/* dtype_ex_time_tz */
+	sizeof(ISC_TIMESTAMP_TZ_EX)		/* dtype_ex_tstamp_tz */
 };
 
 
@@ -179,7 +185,9 @@ static const USHORT type_significant_bits[DTYPE_TYPE_MAX] =
 	0,							// dtype_dec128
 	0,							// dtype_int128
 	0,							// dtype_sql_time_tz
-	0							// dtype_timestamp_tz
+	0,							// dtype_timestamp_tz
+	0,							// dtype_ex_time_tz
+	0							// dtype_ex_tstamp_tz
 };
 
 #endif /* JRD_ALIGN_H */

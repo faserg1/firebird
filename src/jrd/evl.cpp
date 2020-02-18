@@ -440,6 +440,7 @@ void EVL_make_value(thread_db* tdbb, const dsc* desc, impure_value* value, Memor
 		value->vlu_misc.vlu_sql_time = *(GDS_TIME*) from.dsc_address;
 		return;
 
+	case dtype_ex_time_tz:
 	case dtype_sql_time_tz:
 		value->vlu_misc.vlu_sql_time_tz = *(ISC_TIME_TZ*) from.dsc_address;
 		return;
@@ -452,6 +453,7 @@ void EVL_make_value(thread_db* tdbb, const dsc* desc, impure_value* value, Memor
 		value->vlu_misc.vlu_timestamp = *(GDS_TIMESTAMP*) from.dsc_address;
 		return;
 
+	case dtype_ex_tstamp_tz:
 	case dtype_timestamp_tz:
 		value->vlu_misc.vlu_timestamp_tz = *(ISC_TIMESTAMP_TZ*) from.dsc_address;
 		return;

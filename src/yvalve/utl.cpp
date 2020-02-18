@@ -666,7 +666,7 @@ void UtilInterface::decodeTime(ISC_TIME time,
 		*fractions = time % ISC_TIME_SECONDS_PRECISION;
 }
 
-void UtilInterface::decodeTimeTz(CheckStatusWrapper* status, const ISC_TIME_TZ* timeTz,
+void decodeTimeTzWithFallback(CheckStatusWrapper* status, const ISC_TIME_TZ* timeTz, SLONG gmtFallback,
 	unsigned* hours, unsigned* minutes, unsigned* seconds, unsigned* fractions,
 	unsigned timeZoneBufferLength, char* timeZoneBuffer)
 {
@@ -674,7 +674,7 @@ void UtilInterface::decodeTimeTz(CheckStatusWrapper* status, const ISC_TIME_TZ* 
 	{
 		tm times;
 		int intFractions;
-		bool tzLookup = TimeZoneUtil::decodeTime(*timeTz, timeZoneBuffer != nullptr, CVT_commonCallbacks,
+		bool tzLookup = TimeZoneUtil::decodeTime(*timeTz, true, gmtFallback, CVT_commonCallbacks,
 			&times, &intFractions);
 
 		if (hours)
@@ -690,17 +690,29 @@ void UtilInterface::decodeTimeTz(CheckStatusWrapper* status, const ISC_TIME_TZ* 
 			*fractions = (unsigned) intFractions;
 
 		if (timeZoneBuffer)
-		{
-			if (tzLookup)
-				TimeZoneUtil::format(timeZoneBuffer, timeZoneBufferLength, timeTz->time_zone);
-			else
-				strncpy(timeZoneBuffer, TimeZoneUtil::GMT_FALLBACK, timeZoneBufferLength);
-		}
+			TimeZoneUtil::format(timeZoneBuffer, timeZoneBufferLength, timeTz->time_zone, !tzLookup, gmtFallback);
 	}
 	catch (const Exception& ex)
 	{
 		ex.stuffException(status);
 	}
+}
+
+void UtilInterface::decodeTimeTz(CheckStatusWrapper* status, const ISC_TIME_TZ* timeTz,
+	unsigned* hours, unsigned* minutes, unsigned* seconds, unsigned* fractions,
+	unsigned timeZoneBufferLength, char* timeZoneBuffer)
+{
+	decodeTimeTzWithFallback(status, timeTz, TimeZoneUtil::NO_OFFSET,
+		hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+}
+
+void UtilInterface::decodeTimeTzEx(Firebird::CheckStatusWrapper* status, const ISC_TIME_TZ_EX* timeEx,
+	unsigned* hours, unsigned* minutes, unsigned* seconds, unsigned* fractions,
+	unsigned timeZoneBufferLength, char* timeZoneBuffer)
+{
+	decodeTimeTzWithFallback(status, reinterpret_cast<const ISC_TIME_TZ*>(timeEx),
+		timeZoneBuffer ? timeEx->ext_offset : TimeZoneUtil::NO_OFFSET,
+		hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
 }
 
 void UtilInterface::encodeTimeTz(CheckStatusWrapper* status, ISC_TIME_TZ* timeTz,
@@ -718,7 +730,7 @@ void UtilInterface::encodeTimeTz(CheckStatusWrapper* status, ISC_TIME_TZ* timeTz
 	}
 }
 
-void UtilInterface::decodeTimeStampTz(CheckStatusWrapper* status, const ISC_TIMESTAMP_TZ* timeStampTz,
+void decodeTimeStampWithFallback(CheckStatusWrapper* status, const ISC_TIMESTAMP_TZ* timeStampTz, SLONG gmtFallback,
 	unsigned* year, unsigned* month, unsigned* day, unsigned* hours, unsigned* minutes, unsigned* seconds,
 	unsigned* fractions, unsigned timeZoneBufferLength, char* timeZoneBuffer)
 {
@@ -726,7 +738,7 @@ void UtilInterface::decodeTimeStampTz(CheckStatusWrapper* status, const ISC_TIME
 	{
 		tm times;
 		int intFractions;
-		bool tzLookup = TimeZoneUtil::decodeTimeStamp(*timeStampTz, timeZoneBuffer != nullptr, &times, &intFractions);
+		bool tzLookup = TimeZoneUtil::decodeTimeStamp(*timeStampTz, true, gmtFallback, &times, &intFractions);
 
 		if (year)
 			*year = times.tm_year + 1900;
@@ -750,17 +762,29 @@ void UtilInterface::decodeTimeStampTz(CheckStatusWrapper* status, const ISC_TIME
 			*fractions = (unsigned) intFractions;
 
 		if (timeZoneBuffer)
-		{
-			if (tzLookup)
-				TimeZoneUtil::format(timeZoneBuffer, timeZoneBufferLength, timeStampTz->time_zone);
-			else
-				strncpy(timeZoneBuffer, TimeZoneUtil::GMT_FALLBACK, timeZoneBufferLength);
-		}
+			TimeZoneUtil::format(timeZoneBuffer, timeZoneBufferLength, timeStampTz->time_zone, !tzLookup, gmtFallback);
 	}
 	catch (const Exception& ex)
 	{
 		ex.stuffException(status);
 	}
+}
+
+void UtilInterface::decodeTimeStampTz(CheckStatusWrapper* status, const ISC_TIMESTAMP_TZ* timeStampTz,
+	unsigned* year, unsigned* month, unsigned* day, unsigned* hours, unsigned* minutes, unsigned* seconds,
+	unsigned* fractions, unsigned timeZoneBufferLength, char* timeZoneBuffer)
+{
+	decodeTimeStampWithFallback(status, timeStampTz, TimeZoneUtil::NO_OFFSET,
+		year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+}
+
+void UtilInterface::decodeTimeStampTzEx(CheckStatusWrapper* status, const ISC_TIMESTAMP_TZ_EX* timeStampEx,
+	unsigned* year, unsigned* month, unsigned* day, unsigned* hours, unsigned* minutes, unsigned* seconds,
+	unsigned* fractions, unsigned timeZoneBufferLength, char* timeZoneBuffer)
+{
+	decodeTimeStampWithFallback(status, reinterpret_cast<const ISC_TIMESTAMP_TZ*>(timeStampEx),
+		timeZoneBuffer ? timeStampEx->ext_offset : TimeZoneUtil::NO_OFFSET,
+		year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
 }
 
 void UtilInterface::encodeTimeStampTz(CheckStatusWrapper* status, ISC_TIMESTAMP_TZ* timeStampTz,

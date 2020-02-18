@@ -62,6 +62,7 @@ static const TimeZoneDesc* getDesc(USHORT timeZone);
 static inline bool isOffset(USHORT timeZone);
 static USHORT makeFromOffset(int sign, unsigned tzh, unsigned tzm);
 static inline SSHORT offsetZoneToDisplacement(USHORT timeZone);
+static inline USHORT displacementToOffsetZone(SSHORT displacement);
 static int parseNumber(const char*& p, const char* end);
 static void skipSpaces(const char*& p, const char* end);
 
@@ -410,11 +411,30 @@ USHORT TimeZoneUtil::parseRegion(const char* str, unsigned strLen)
 }
 
 // Format a time zone to string, as offset or region.
-unsigned TimeZoneUtil::format(char* buffer, size_t bufferSize, USHORT timeZone)
+unsigned TimeZoneUtil::format(char* buffer, size_t bufferSize, USHORT timeZone, bool fallback, SLONG offset)
 {
 	char* p = buffer;
 
-	if (isOffset(timeZone))
+	if (fallback)
+	{
+		if (offset == NO_OFFSET)
+			p += fb_utils::snprintf(p, bufferSize - (p - buffer), "%s", GMT_FALLBACK);
+		else
+		{
+			p += fb_utils::snprintf(p, bufferSize - (p - buffer), "%s", "GMT");
+			if (offset != 0)
+			{
+				*p++ = offset < 0 ? '-' : '+';
+				if (offset < 0)
+					offset = -offset;
+
+				int minutes = offset % 60;
+				offset /= 60;
+				p += fb_utils::snprintf(p, bufferSize - (p - buffer), minutes ? "%d:%02d" : "%d", offset, minutes);
+			}
+		}
+	}
+	else if (isOffset(timeZone))
 	{
 		SSHORT displacement = offsetZoneToDisplacement(timeZone);
 
@@ -444,6 +464,19 @@ bool TimeZoneUtil::isValidOffset(int sign, unsigned tzh, unsigned tzm)
 
 // Extracts the offsets from a offset- or region-based datetime with time zone.
 void TimeZoneUtil::extractOffset(const ISC_TIMESTAMP_TZ& timeStampTz, int* sign, unsigned* tzh, unsigned* tzm)
+{
+	SSHORT displacement;
+	extractOffset(timeStampTz, &displacement);
+
+	*sign = displacement < 0 ? -1 : 1;
+	displacement = displacement < 0 ? -displacement : displacement;
+
+	*tzh = displacement / 60;
+	*tzm = displacement % 60;
+}
+
+// Extracts the offset (+- minutes) from a offset- or region-based datetime with time zone.
+void TimeZoneUtil::extractOffset(const ISC_TIMESTAMP_TZ& timeStampTz, SSHORT* offset)
 {
 	SSHORT displacement;
 
@@ -486,11 +519,7 @@ void TimeZoneUtil::extractOffset(const ISC_TIMESTAMP_TZ& timeStampTz, int* sign,
 		icuLib.ucalClose(icuCalendar);
 	}
 
-	*sign = displacement < 0 ? -1 : 1;
-	displacement = displacement < 0 ? -displacement : displacement;
-
-	*tzh = displacement / 60;
-	*tzm = displacement % 60;
+	*offset = displacement;
 }
 
 // Converts a time-tz to a time in a given zone.
@@ -516,7 +545,7 @@ ISC_TIMESTAMP TimeZoneUtil::timeStampTzToTimeStamp(const ISC_TIMESTAMP_TZ& timeS
 
 	struct tm times;
 	int fractions;
-	decodeTimeStamp(tempTimeStampTz, false, &times, &fractions);
+	decodeTimeStamp(tempTimeStampTz, false, TimeZoneUtil::NO_OFFSET, &times, &fractions);
 
 	return TimeStamp::encode_timestamp(&times, fractions);
 }
@@ -613,7 +642,7 @@ void TimeZoneUtil::localTimeStampToUtc(ISC_TIMESTAMP_TZ& timeStampTz)
 	timeStampTz.utc_timestamp.timestamp_time = ticks % TimeStamp::ISC_TICKS_PER_DAY;
 }
 
-bool TimeZoneUtil::decodeTime(const ISC_TIME_TZ& timeTz, bool gmtFallback, Callbacks* cb,
+bool TimeZoneUtil::decodeTime(const ISC_TIME_TZ& timeTz, bool gmtFallback, SLONG gmtOffset, Callbacks* cb,
 	struct tm* times, int* fractions)
 {
 	bool tzLookup = true;
@@ -628,7 +657,7 @@ bool TimeZoneUtil::decodeTime(const ISC_TIME_TZ& timeTz, bool gmtFallback, Callb
 		if (gmtFallback)
 		{
 			tzLookup = false;
-			timeStampTz.time_zone = TimeZoneUtil::GMT_ZONE;
+			timeStampTz.time_zone = displacementToOffsetZone(gmtOffset == TimeZoneUtil::NO_OFFSET ? 0 : gmtOffset);
 			timeStampTz.utc_timestamp = cb->getCurrentGmtTimeStamp();
 			timeStampTz.utc_timestamp.timestamp_time = timeTz.utc_time;
 		}
@@ -636,11 +665,11 @@ bool TimeZoneUtil::decodeTime(const ISC_TIME_TZ& timeTz, bool gmtFallback, Callb
 			throw;
 	}
 
-	decodeTimeStamp(timeStampTz, false, times, fractions);
+	decodeTimeStamp(timeStampTz, gmtFallback, gmtOffset, times, fractions);
 	return tzLookup;
 }
 
-bool TimeZoneUtil::decodeTimeStamp(const ISC_TIMESTAMP_TZ& timeStampTz, bool gmtFallback,
+bool TimeZoneUtil::decodeTimeStamp(const ISC_TIMESTAMP_TZ& timeStampTz, bool gmtFallback, SLONG gmtOffset,
 	struct tm* times, int* fractions)
 {
 	SINT64 ticks = timeStampTz.utc_timestamp.timestamp_date * TimeStamp::ISC_TICKS_PER_DAY +
@@ -687,13 +716,11 @@ bool TimeZoneUtil::decodeTimeStamp(const ISC_TIMESTAMP_TZ& timeStampTz, bool gmt
 		}
 		catch (const Exception&)
 		{
-			if (gmtFallback)
-			{
-				icuFail = true;
-				displacement = 0;
-			}
-			else
+			if (!gmtFallback)
 				throw;
+
+			icuFail = true;
+			displacement = gmtOffset == TimeZoneUtil::NO_OFFSET ? 0 : gmtOffset;
 		}
 	}
 
@@ -1037,7 +1064,7 @@ static USHORT makeFromOffset(int sign, unsigned tzh, unsigned tzm)
 		status_exception::raise(Arg::Gds(isc_invalid_timezone_offset) << str);
 	}
 
-	return (USHORT)((tzh * 60 + tzm) * sign + ONE_DAY);
+	return (USHORT)displacementToOffsetZone((tzh * 60 + tzm) * sign);
 }
 
 // Gets the displacement from a offset-based time zone id.
@@ -1046,6 +1073,11 @@ static inline SSHORT offsetZoneToDisplacement(USHORT timeZone)
 	fb_assert(isOffset(timeZone));
 
 	return (SSHORT) (int(timeZone) - ONE_DAY);
+}
+
+static inline USHORT displacementToOffsetZone(SSHORT displacement)
+{
+	return (USHORT)(int(displacement) + ONE_DAY);
 }
 
 // Parses a integer number.

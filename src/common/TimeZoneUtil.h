@@ -91,10 +91,12 @@ public:
 	static USHORT parse(const char* str, unsigned strLen);
 	static USHORT parseRegion(const char* str, unsigned strLen);
 
-	static unsigned format(char* buffer, size_t bufferSize, USHORT timeZone);
+	static unsigned format(char* buffer, size_t bufferSize, USHORT timeZone,
+		bool fallback = false, SLONG offset = NO_OFFSET);
 
 	static bool isValidOffset(int sign, unsigned tzh, unsigned tzm);
 
+	static void extractOffset(const ISC_TIMESTAMP_TZ& timeStampTz, SSHORT* offset);
 	static void extractOffset(const ISC_TIMESTAMP_TZ& timeStampTz, int* sign, unsigned* tzh, unsigned* tzm);
 
 	static ISC_TIME timeTzToTime(const ISC_TIME_TZ& timeTz, USHORT toTimeZone, Callbacks* cb);
@@ -106,9 +108,10 @@ public:
 	static void localTimeStampToUtc(ISC_TIMESTAMP& timeStamp, Callbacks* cb);
 	static void localTimeStampToUtc(ISC_TIMESTAMP_TZ& timeStampTz);
 
-	static bool decodeTime(const ISC_TIME_TZ& timeTz, bool gmtFallback, Callbacks* cb,
+	static const SLONG NO_OFFSET = MAX_SLONG;
+	static bool decodeTime(const ISC_TIME_TZ& timeTz, bool gmtFallback, SLONG gmtOffset, Callbacks* cb,
 		struct tm* times, int* fractions = NULL);
-	static bool decodeTimeStamp(const ISC_TIMESTAMP_TZ& timeStampTz, bool gmtFallback,
+	static bool decodeTimeStamp(const ISC_TIMESTAMP_TZ& timeStampTz, bool gmtFallback, SLONG gmtOffset,
 		struct tm* times, int* fractions = NULL);
 
 	static ISC_TIMESTAMP_TZ getCurrentSystemTimeStamp();

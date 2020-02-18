@@ -104,7 +104,9 @@ const BYTE CVT2_compare_priority[] =
 	16,	// dec64 - go after dtype_d_float 
 	17,	// dec128 - go after dec64 and before dtype_sql_date
 	20,	// dtype_sql_time_tz - go after dtype_sql_time
-	22	// dtype_timestamp_tz - go after dtype_timestamp
+	22,	// dtype_timestamp_tz - go after dtype_timestamp
+	99, // dtype_ex_time_tz - should not be used here
+	99  // dtype_ex_tstamp_tz - should not be used here
 };
 
 static inline int QUAD_COMPARE(const SQUAD* arg1, const SQUAD* arg2)
@@ -236,6 +238,7 @@ int CVT2_compare(const dsc* arg1, const dsc* arg2, Firebird::DecimalStatus decSt
 				return 1;
 			return -1;
 
+		case dtype_ex_time_tz:
 		case dtype_sql_time_tz:
 		case dtype_sql_time:
 			if (*(ULONG *) p1 == *(ULONG *) p2)
@@ -274,6 +277,7 @@ int CVT2_compare(const dsc* arg1, const dsc* arg2, Firebird::DecimalStatus decSt
 				return (arg1->dsc_length > l) ? 1 : (arg2->dsc_length > l) ? -1 : 0;
 			}
 
+		case dtype_ex_tstamp_tz:
 		case dtype_timestamp_tz:
 		case dtype_timestamp:
 			if (((SLONG *) p1)[0] > ((SLONG *) p2)[0])
@@ -423,6 +427,7 @@ int CVT2_compare(const dsc* arg1, const dsc* arg2, Firebird::DecimalStatus decSt
 
 	switch (arg1->dsc_dtype)
 	{
+	case dtype_ex_tstamp_tz:
 	case dtype_timestamp_tz:
 		{
 			DSC desc;
@@ -447,6 +452,7 @@ int CVT2_compare(const dsc* arg1, const dsc* arg2, Firebird::DecimalStatus decSt
 			return CVT2_compare(arg1, &desc, 0);
 		}
 
+	case dtype_ex_time_tz:
 	case dtype_sql_time_tz:
 		{
 			DSC desc;

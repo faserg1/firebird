@@ -607,6 +607,7 @@ using namespace Firebird;
 %token <metaNamePtr> DEFINER
 %token <metaNamePtr> EXCESS
 %token <metaNamePtr> EXCLUDE
+%token <metaNamePtr> EXTENDED
 %token <metaNamePtr> FIRST_DAY
 %token <metaNamePtr> FOLLOWING
 %token <metaNamePtr> HEX_DECODE
@@ -4691,18 +4692,7 @@ non_charset_simple_type
 		{
 			$$ = newNode<dsql_fld>();
 
-			if (client_dialect < SQL_DIALECT_V6_TRANSITION)
-			{
-				ERRD_post(Arg::Gds(isc_sqlerr) << Arg::Num(-104) <<
-						  Arg::Gds(isc_sql_dialect_datatype_unsupport) << Arg::Num(client_dialect) <<
-																		  Arg::Str("TIME"));
-			}
-			if (db_dialect < SQL_DIALECT_V6_TRANSITION)
-			{
-				ERRD_post(Arg::Gds(isc_sqlerr) << Arg::Num(-104) <<
-						  Arg::Gds(isc_sql_db_dialect_dtype_unsupport) << Arg::Num(db_dialect) <<
-																		  Arg::Str("TIME"));
-			}
+			checkTimeDialect();
 			$$->dtype = dtype_sql_time;
 			$$->length = sizeof(SLONG);
 		}
@@ -4710,18 +4700,7 @@ non_charset_simple_type
 		{
 			$$ = newNode<dsql_fld>();
 
-			if (client_dialect < SQL_DIALECT_V6_TRANSITION)
-			{
-				ERRD_post(Arg::Gds(isc_sqlerr) << Arg::Num(-104) <<
-						  Arg::Gds(isc_sql_dialect_datatype_unsupport) << Arg::Num(client_dialect) <<
-																		  Arg::Str("TIME"));
-			}
-			if (db_dialect < SQL_DIALECT_V6_TRANSITION)
-			{
-				ERRD_post(Arg::Gds(isc_sqlerr) << Arg::Num(-104) <<
-						  Arg::Gds(isc_sql_db_dialect_dtype_unsupport) << Arg::Num(db_dialect) <<
-																		  Arg::Str("TIME"));
-			}
+			checkTimeDialect();
 			$$->dtype = dtype_sql_time_tz;
 			$$->length = sizeof(ISC_TIME_TZ);
 		}
@@ -5335,7 +5314,27 @@ set_bind_to
 			$$ = newNode<dsql_fld>();
 			$$->flags = FLD_native;
 		}
+	| EXTENDED TIME with_time_zone_opt
+		{
+			$$ = newNode<dsql_fld>();
+
+			checkTimeDialect();
+			$$->dtype = dtype_ex_time_tz;
+			$$->length = sizeof(ISC_TIME_TZ_EX);
+		}
+	| EXTENDED TIMESTAMP with_time_zone_opt
+		{
+			$$ = newNode<dsql_fld>();
+			$$->dtype = dtype_ex_tstamp_tz;
+			$$->length = sizeof(ISC_TIMESTAMP_TZ_EX);
+		}
 	;
+
+with_time_zone_opt
+	: // nothing
+	| WITH TIME ZONE
+	;
+
 
 %type decfloat_traps_list_opt(<setDecFloatTrapsNode>)
 decfloat_traps_list_opt($setDecFloatTrapsNode)
@@ -8859,6 +8858,7 @@ non_reserved_word
 	| DEFINER
 	| EXCESS
 	| EXCLUDE
+	| EXTENDED
 	| FIRST_DAY
 	| FOLLOWING
 	| HEX_DECODE

@@ -639,6 +639,11 @@ void ArithmeticNode::makeDialect1(dsc* desc, dsc& desc1, dsc& desc2)
 
 			switch (dtype)
 			{
+				case dtype_ex_time_tz:
+				case dtype_ex_tstamp_tz:
+					fb_assert(false);
+					ERRD_post(Arg::Gds(isc_expression_eval_err));
+
 				case dtype_sql_time:
 				case dtype_sql_time_tz:
 				case dtype_sql_date:
@@ -928,6 +933,11 @@ void ArithmeticNode::makeDialect3(dsc* desc, dsc& desc1, dsc& desc2)
 
 			switch (dtype)
 			{
+				case dtype_ex_time_tz:
+				case dtype_ex_tstamp_tz:
+					fb_assert(false);
+					ERRD_post(Arg::Gds(isc_expression_eval_err));
+
 				case dtype_sql_time:
 				case dtype_sql_time_tz:
 				case dtype_sql_date:
@@ -1229,6 +1239,11 @@ void ArithmeticNode::getDescDialect1(thread_db* /*tdbb*/, dsc* desc, dsc& desc1,
 					desc->dsc_flags = 0;
 					return;
 
+				case dtype_ex_time_tz:
+				case dtype_ex_tstamp_tz:
+					fb_assert(false);
+					ERRD_post(Arg::Gds(isc_expression_eval_err));
+
 				case dtype_sql_date:
 				case dtype_sql_time:
 				case dtype_sql_time_tz:
@@ -1518,6 +1533,11 @@ void ArithmeticNode::getDescDialect3(thread_db* /*tdbb*/, dsc* desc, dsc& desc1,
 
 			switch (dtype)
 			{
+				case dtype_ex_time_tz:
+				case dtype_ex_tstamp_tz:
+					fb_assert(false);
+					ERRD_post(Arg::Gds(isc_expression_eval_err));
+
 				case dtype_timestamp:
 				case dtype_timestamp_tz:
 				case dtype_sql_date:
@@ -2534,6 +2554,11 @@ dsc* ArithmeticNode::addDateTime(thread_db* tdbb, const dsc* desc, impure_value*
 		case DTYPE_CANNOT:
 			ERR_post(Arg::Gds(isc_expression_eval_err) << Arg::Gds(isc_invalid_type_datetime_op));
 			break;
+
+		case dtype_ex_time_tz:
+		case dtype_ex_tstamp_tz:
+			fb_assert(false);
+			ERRD_post(Arg::Gds(isc_expression_eval_err));
 
 		case dtype_timestamp:
 		case dtype_timestamp_tz:
@@ -5463,7 +5488,7 @@ dsc* ExtractNode::execute(thread_db* tdbb, jrd_req* request) const
 				case blr_extract_second:
 				case blr_extract_millisecond:
 					TimeZoneUtil::decodeTime(*(ISC_TIME_TZ*) value->dsc_address,
-						false, &EngineCallbacks::instance, &times, &fractions);
+						false, TimeZoneUtil::NO_OFFSET, &EngineCallbacks::instance, &times, &fractions);
 					break;
 
 				case blr_extract_timezone_hour:
@@ -5523,7 +5548,8 @@ dsc* ExtractNode::execute(thread_db* tdbb, jrd_req* request) const
 					break;
 
 				default:
-					TimeZoneUtil::decodeTimeStamp(*(ISC_TIMESTAMP_TZ*) value->dsc_address, false, &times, &fractions);
+					TimeZoneUtil::decodeTimeStamp(*(ISC_TIMESTAMP_TZ*) value->dsc_address, false, TimeZoneUtil::NO_OFFSET,
+						&times, &fractions);
 			}
 			break;
 
