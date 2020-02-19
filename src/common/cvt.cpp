@@ -1616,6 +1616,10 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 				TimeZoneUtil::cvtTimeTzToTimeStampTz(*(ISC_TIME_TZ*) from->dsc_address, cb);
 			return;
 
+		case dtype_ex_timestamp_tz:
+			*((ISC_TIMESTAMP_TZ*) to->dsc_address) = *((ISC_TIMESTAMP_TZ*) from->dsc_address);
+			return;
+
 		case dtype_sql_date:
 			*(ISC_TIMESTAMP_TZ*) to->dsc_address =
 				TimeZoneUtil::cvtDateToTimeStampTz(*(GDS_DATE*) from->dsc_address, cb);
@@ -1723,6 +1727,10 @@ void CVT_move_common(const dsc* from, dsc* to, DecimalStatus decSt, Callbacks* c
 			*(ISC_TIME_TZ*) to->dsc_address =
 				TimeZoneUtil::cvtTimeStampTzToTimeTz(*(ISC_TIMESTAMP_TZ*) from->dsc_address);
 			return;
+
+		case dtype_ex_time_tz:
+			*(ISC_TIME_TZ*) to->dsc_address = *(ISC_TIME_TZ*) from->dsc_address;
+			 return;
 
 		default:
 			CVT_conversion_error(from, cb->err);
