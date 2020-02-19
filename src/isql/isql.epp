@@ -2458,6 +2458,27 @@ static processing_state add_row(TEXT* tabname)
 					}
 					break;
 
+				case SQL_TIME_TZ_EX:
+				case SQL_TIME_TZ:
+					{
+						Firebird::string tmp(lastInputLine, length);
+						unsigned hours, minutes, seconds;
+						char timeZone[TimeZoneUtil::MAX_SIZE];
+						fb_assert(TimeZoneUtil::MAX_SIZE - 1 == 32);
+						if (3 > sscanf(tmp.c_str(), "%u:%u:%u %32s", &hours, &minutes, &seconds, timeZone))
+						{
+							IUTILS_msg_get(TIME_ERR, txt, SafeArg() << tmp.c_str());
+							STDERROUT(txt);	// Bad time %s\n
+							done = true;
+						}
+
+						Firebird::UtilInterfacePtr()->encodeTimeTz(fbStatus,
+							(ISC_TIME_TZ*) datap, hours, minutes, seconds, 0, timeZone);
+						if (ISQL_errmsg(fbStatus))
+							done = true;
+					}
+					break;
+
 				case SQL_TIMESTAMP:
 					if (6 <= sscanf(lastInputLine, "%d/%d/%d %d:%d:%d.%4s",
 									&times.tm_year, &times.tm_mon, &times.tm_mday,
@@ -2495,6 +2516,29 @@ static processing_state add_row(TEXT* tabname)
 						ISC_TIMESTAMP* datetime = (ISC_TIMESTAMP*) datap;
 						isc_encode_timestamp(&times, datetime);
 						datetime->timestamp_time += msec;
+					}
+					break;
+
+				case SQL_TIMESTAMP_TZ_EX:
+				case SQL_TIMESTAMP_TZ:
+					{
+						Firebird::string tmp(lastInputLine, length);
+						unsigned year, month, day;
+						unsigned hours, minutes, seconds, fractions;
+						char timeZone[TimeZoneUtil::MAX_SIZE];
+						fb_assert(TimeZoneUtil::MAX_SIZE - 1 == 32);
+						if (7 > sscanf(tmp.c_str(), "%u-%u-%u %u:%u:%u.%u %32s", &year, &month, &day,
+							&hours, &minutes, &seconds, &fractions, timeZone))
+						{
+							IUTILS_msg_get(TIMESTAMP_ERR, txt, SafeArg() << tmp.c_str());
+							STDERROUT(txt);	// Bad time %s\n
+							done = true;
+						}
+
+						Firebird::UtilInterfacePtr()->encodeTimeStampTz(fbStatus,
+							(ISC_TIMESTAMP_TZ*) datap, year, month, day, hours, minutes, seconds, fractions, timeZone);
+						if (ISQL_errmsg(fbStatus))
+							done = true;
 					}
 					break;
 
@@ -3252,6 +3296,27 @@ static processing_state bulk_insert_hack(const char* command)
 					}
 					break;
 
+				case SQL_TIME_TZ_EX:
+				case SQL_TIME_TZ:
+					{
+						Firebird::string tmp(lastPos, length);
+						unsigned hours, minutes, seconds;
+						char timeZone[TimeZoneUtil::MAX_SIZE];
+						fb_assert(TimeZoneUtil::MAX_SIZE - 1 == 32);
+						if (3 > sscanf(tmp.c_str(), "%u:%u:%u %32s", &hours, &minutes, &seconds, timeZone))
+						{
+							IUTILS_msg_get(TIME_ERR, msg, SafeArg() << tmp.c_str());
+							STDERROUT(msg);	// Bad time %s\n
+							done = true;
+						}
+
+						Firebird::UtilInterfacePtr()->encodeTimeTz(fbStatus,
+							(ISC_TIME_TZ*) datap, hours, minutes, seconds, 0, timeZone);
+						if (ISQL_errmsg(fbStatus))
+							done = true;
+					}
+					break;
+
 				case SQL_TIMESTAMP:
 					if (6 <= sscanf(lastPos, "%d-%d-%d %d:%d:%d.%4s",
 									&times.tm_year, &times.tm_mon, &times.tm_mday,
@@ -3290,6 +3355,29 @@ static processing_state bulk_insert_hack(const char* command)
 						ISC_TIMESTAMP* datetime = (ISC_TIMESTAMP*) datap;
 						isc_encode_timestamp(&times, datetime);
 						datetime->timestamp_time += msec;
+					}
+					break;
+
+				case SQL_TIMESTAMP_TZ_EX:
+				case SQL_TIMESTAMP_TZ:
+					{
+						Firebird::string tmp(lastPos, length);
+						unsigned year, month, day;
+						unsigned hours, minutes, seconds, fractions;
+						char timeZone[TimeZoneUtil::MAX_SIZE];
+						fb_assert(TimeZoneUtil::MAX_SIZE - 1 == 32);
+						if (7 > sscanf(tmp.c_str(), "%u-%u-%u %u:%u:%u.%u %32s", &year, &month, &day,
+							&hours, &minutes, &seconds, &fractions, timeZone))
+						{
+							IUTILS_msg_get(TIMESTAMP_ERR, msg, SafeArg() << tmp.c_str());
+							STDERROUT(msg);	// Bad time %s\n
+							done = true;
+						}
+
+						Firebird::UtilInterfacePtr()->encodeTimeStampTz(fbStatus,
+							(ISC_TIMESTAMP_TZ*) datap, year, month, day, hours, minutes, seconds, fractions, timeZone);
+						if (ISQL_errmsg(fbStatus))
+							done = true;
 					}
 					break;
 
