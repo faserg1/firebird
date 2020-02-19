@@ -421,17 +421,15 @@ unsigned TimeZoneUtil::format(char* buffer, size_t bufferSize, USHORT timeZone, 
 			p += fb_utils::snprintf(p, bufferSize - (p - buffer), "%s", GMT_FALLBACK);
 		else
 		{
-			p += fb_utils::snprintf(p, bufferSize - (p - buffer), "%s", "GMT");
 			if (offset != 0)
-			{
 				*p++ = offset < 0 ? '-' : '+';
-				if (offset < 0)
-					offset = -offset;
 
-				int minutes = offset % 60;
-				offset /= 60;
-				p += fb_utils::snprintf(p, bufferSize - (p - buffer), minutes ? "%d:%02d" : "%d", offset, minutes);
-			}
+			if (offset < 0)
+				offset = -offset;
+
+			int minutes = offset % 60;
+			offset /= 60;
+			p += fb_utils::snprintf(p, bufferSize - (p - buffer), "%02d:%02d", offset, minutes);
 		}
 	}
 	else if (isOffset(timeZone))
