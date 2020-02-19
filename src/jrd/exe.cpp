@@ -382,7 +382,7 @@ void EXE_assignment(thread_db* tdbb, const ValueExprNode* to, dsc* from_desc, bo
 
 				case dtype_timestamp:
 				case dtype_timestamp_tz:
-				case dtype_ex_tstamp_tz:
+				case dtype_ex_timestamp_tz:
 					if (!Firebird::TimeStamp::isValidTimeStamp(*(GDS_TIMESTAMP*) from_desc->dsc_address))
 					{
 						ERR_post(Arg::Gds(isc_datetime_range_exceeded));

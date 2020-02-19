@@ -374,8 +374,8 @@ USHORT PAR_datatype(BlrReader& blrReader, dsc* desc)
 			desc->dsc_length = sizeof(ISC_TIMESTAMP_TZ);
 			break;
 
-		case blr_ex_tstamp_tz:
-			desc->dsc_dtype = dtype_ex_tstamp_tz;
+		case blr_ex_timestamp_tz:
+			desc->dsc_dtype = dtype_ex_timestamp_tz;
 			desc->dsc_length = sizeof(ISC_TIMESTAMP_TZ_EX);
 			break;
 

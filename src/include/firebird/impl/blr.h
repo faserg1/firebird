@@ -73,7 +73,7 @@
 #define blr_sql_time_tz		(unsigned char)28
 #define blr_timestamp_tz	(unsigned char)29
 #define blr_ex_time_tz		(unsigned char)30
-#define blr_ex_tstamp_tz	(unsigned char)31
+#define blr_ex_timestamp_tz	(unsigned char)31
 
 // first sub parameter for blr_domain_name[2]
 #define blr_domain_type_of	(unsigned char)0

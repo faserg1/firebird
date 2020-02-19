@@ -7539,7 +7539,7 @@ static unsigned print_item(TEXT** s, const IsqlVar* var, const unsigned length)
 				}
 				else
 				{
-					Firebird::UtilInterfacePtr()->decodeTimeStampTzEx(fbStatus, var->value.asDateTimeEx,
+					Firebird::UtilInterfacePtr()->decodeTimeStampTzEx(fbStatus, var->value.asDateTimeTzEx,
 						&year, &month, &day, &hours, &minutes, &seconds, &fractions, sizeof(timeZone), timeZone);
 				}
 
@@ -7587,7 +7587,7 @@ static unsigned print_item(TEXT** s, const IsqlVar* var, const unsigned length)
 				}
 				else
 				{
-					Firebird::UtilInterfacePtr()->decodeTimeTzEx(fbStatus, var->value.asTimeEx, &hours, &minutes, &seconds,
+					Firebird::UtilInterfacePtr()->decodeTimeTzEx(fbStatus, var->value.asTimeTzEx, &hours, &minutes, &seconds,
 						&fractions, sizeof(timeZone), timeZone);
 				}
 

@@ -204,7 +204,7 @@ ULONG CAN_encode_decode(burp_rel* relation, lstring* buffer, UCHAR* data, bool d
 				return FALSE;
 			break;
 
-		case dtype_ex_tstamp_tz:
+		case dtype_ex_timestamp_tz:
 			if (!xdr_long(xdrs, (SLONG*) p))
 				return FALSE;
 			if (!xdr_long(xdrs, &((SLONG*) p)[1]))

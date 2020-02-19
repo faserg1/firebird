@@ -69,10 +69,10 @@ static const USHORT _DSC_convert_to_text_length[DTYPE_TYPE_MAX] =
 	23,							// dtype_dec64		1 + 1 + 1 + 1 + 16(34) + 3(4)
 	42,							// dtype_dec128		+-  .   e   +-  coeff  + exp
 	47,							// dtype_int128
-	14 + TimeZoneUtil::MAX_LEN,	// dtype_sql_time_tz   HH:MM:SS.MMMM +NN:NN
-	25 + TimeZoneUtil::MAX_LEN,	// dtype_timestamp_tz  YYYY-MM-DD HH:MM:SS.MMMM +NN:NN
-	14 + TimeZoneUtil::MAX_LEN,	// dtype_ex_time_tz    HH:MM:SS.MMMM +NN:NN
-	25 + TimeZoneUtil::MAX_LEN	// dtype_ex_tstamp_tz  YYYY-MM-DD HH:MM:SS.MMMM +NN:NN
+	14 + TimeZoneUtil::MAX_LEN,	// dtype_sql_time_tz      HH:MM:SS.MMMM +NN:NN
+	25 + TimeZoneUtil::MAX_LEN,	// dtype_timestamp_tz     YYYY-MM-DD HH:MM:SS.MMMM +NN:NN
+	14 + TimeZoneUtil::MAX_LEN,	// dtype_ex_time_tz       HH:MM:SS.MMMM +NN:NN
+	25 + TimeZoneUtil::MAX_LEN	// dtype_ex_timestamp_tz  YYYY-MM-DD HH:MM:SS.MMMM +NN:NN
 };
 
 // Unimplemented names are in lowercase & <brackets>
@@ -125,7 +125,7 @@ const BYTE DSC_add_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	dtype_timestamp		dtype_blob			dtype_array			dtype_int64
 	dtype_dbkey			dtype_boolean		dtype_dec64			dtype_dec128
 	dtype_int128 		dtype_sql_time_tz	dtype_timestamp_tz	dtype_ex_time_tz
-	dtype_ex_tstamp_tz
+	dtype_ex_timestamp_tz
 	*/
 
 	// dtype_unknown
@@ -408,7 +408,7 @@ const BYTE DSC_add_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT},
 
-	// dtype_ex_tstamp_tz
+	// dtype_ex_timestamp_tz
 	{DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
@@ -435,7 +435,7 @@ const BYTE DSC_sub_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	dtype_timestamp		dtype_blob			dtype_array			dtype_int64
 	dtype_dbkey			dtype_boolean		dtype_dec64			dtype_dec128
 	dtype_int128 		dtype_sql_time_tz	dtype_timestamp_tz	dtype_ex_time_tz
-	dtype_ex_tstamp_tz
+	dtype_ex_timestamp_tz
 	*/
 
 	// dtype_unknown
@@ -718,7 +718,7 @@ const BYTE DSC_sub_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT},
 
-	// dtype_ex_tstamp_tz
+	// dtype_ex_timestamp_tz
 	{DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
@@ -746,7 +746,7 @@ const BYTE DSC_multiply_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	dtype_timestamp		dtype_blob			dtype_array			dtype_int64
 	dtype_dbkey			dtype_boolean		dtype_dec64			dtype_dec128
 	dtype_int128 		dtype_sql_time_tz	dtype_timestamp_tz	dtype_ex_time_tz
-	dtype_ex_tstamp_tz
+	dtype_ex_timestamp_tz
 	*/
 
 	// dtype_unknown
@@ -1029,7 +1029,7 @@ const BYTE DSC_multiply_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT},
 
-	// dtype_ex_tstamp_tz
+	// dtype_ex_timestamp_tz
 	{DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
@@ -1056,7 +1056,7 @@ const BYTE DSC_multiply_blr4_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	dtype_timestamp		dtype_blob			dtype_array			dtype_int64
 	dtype_dbkey			dtype_boolean		dtype_dec64			dtype_dec128
 	dtype_int128 		dtype_sql_time_tz	dtype_timestamp_tz	dtype_ex_time_tz
-	dtype_ex_tstamp_tz
+	dtype_ex_timestamp_tz
 	*/
 
 	// dtype_unknown
@@ -1339,7 +1339,7 @@ const BYTE DSC_multiply_blr4_result[DTYPE_TYPE_MAX][DTYPE_TYPE_MAX] =
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT},
 
-	// dtype_ex_tstamp_tz
+	// dtype_ex_timestamp_tz
 	{DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
 	 DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT, DTYPE_CANNOT,
@@ -1492,9 +1492,9 @@ bool DSC_make_descriptor(DSC* desc,
 		desc->dsc_dtype = dtype_sql_time_tz;
 		break;
 
-	case blr_ex_tstamp_tz:
+	case blr_ex_timestamp_tz:
 		desc->dsc_length = sizeof(ISC_TIMESTAMP_TZ_EX);
-		desc->dsc_dtype = dtype_ex_tstamp_tz;
+		desc->dsc_dtype = dtype_ex_timestamp_tz;
 		break;
 
 	case blr_ex_time_tz:
@@ -1660,7 +1660,7 @@ const char* dsc::typeToText() const
 		return "timestamp with timezone";
 	case dtype_ex_time_tz:
 		return "extended time with timezone";
-	case dtype_ex_tstamp_tz:
+	case dtype_ex_timestamp_tz:
 		return "extended timestamp with timezone";
 	default:
 		return "out of range";
@@ -1775,7 +1775,7 @@ void dsc::getSqlInfo(SLONG* sqlLength, SLONG* sqlSubType, SLONG* sqlScale, SLONG
 			*sqlType = SQL_TIME_TZ;
 			break;
 
-		case dtype_ex_tstamp_tz:
+		case dtype_ex_timestamp_tz:
 			*sqlType = SQL_TIMESTAMP_TZ_EX;
 			break;
 

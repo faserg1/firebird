@@ -43,7 +43,7 @@ inline bool DTYPE_IS_TEXT(UCHAR d)
 
 inline bool DTYPE_IS_DATE(UCHAR t)
 {
-	return (t >= dtype_sql_date && t <= dtype_timestamp) || (t >= dtype_sql_time_tz && t <= dtype_ex_tstamp_tz);
+	return (t >= dtype_sql_date && t <= dtype_timestamp) || (t >= dtype_sql_time_tz && t <= dtype_ex_timestamp_tz);
 }
 
 // DTYPE_IS_BLOB includes both BLOB and ARRAY since array's are implemented over blobs.
@@ -166,7 +166,7 @@ typedef struct dsc
 
 	bool isDateTimeTz() const
 	{
-		return dsc_dtype >= dtype_sql_time_tz && dsc_dtype <= dtype_ex_tstamp_tz;
+		return dsc_dtype >= dtype_sql_time_tz && dsc_dtype <= dtype_ex_timestamp_tz;
 	}
 
 	bool isDate() const
@@ -181,7 +181,7 @@ typedef struct dsc
 
 	bool isTimeStamp() const
 	{
-		return dsc_dtype == dtype_timestamp || dsc_dtype == dtype_timestamp_tz || dsc_dtype == dtype_ex_tstamp_tz;
+		return dsc_dtype == dtype_timestamp || dsc_dtype == dtype_timestamp_tz || dsc_dtype == dtype_ex_timestamp_tz;
 	}
 
 	bool isDecFloat() const
@@ -452,7 +452,7 @@ typedef struct dsc
 	void makeTimestampTzEx(ISC_TIMESTAMP_TZ_EX* address = NULL)
 	{
 		clear();
-		dsc_dtype = dtype_ex_tstamp_tz;
+		dsc_dtype = dtype_ex_timestamp_tz;
 		dsc_length = sizeof(ISC_TIMESTAMP_TZ_EX);
 		dsc_scale = 0;
 		dsc_address = (UCHAR*) address;

@@ -5325,7 +5325,7 @@ set_bind_to
 	| EXTENDED TIMESTAMP with_time_zone_opt
 		{
 			$$ = newNode<dsql_fld>();
-			$$->dtype = dtype_ex_tstamp_tz;
+			$$->dtype = dtype_ex_timestamp_tz;
 			$$->length = sizeof(ISC_TIMESTAMP_TZ_EX);
 		}
 	;

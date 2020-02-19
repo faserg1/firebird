@@ -640,7 +640,7 @@ void ArithmeticNode::makeDialect1(dsc* desc, dsc& desc1, dsc& desc2)
 			switch (dtype)
 			{
 				case dtype_ex_time_tz:
-				case dtype_ex_tstamp_tz:
+				case dtype_ex_timestamp_tz:
 					fb_assert(false);
 					ERRD_post(Arg::Gds(isc_expression_eval_err));
 
@@ -934,7 +934,7 @@ void ArithmeticNode::makeDialect3(dsc* desc, dsc& desc1, dsc& desc2)
 			switch (dtype)
 			{
 				case dtype_ex_time_tz:
-				case dtype_ex_tstamp_tz:
+				case dtype_ex_timestamp_tz:
 					fb_assert(false);
 					ERRD_post(Arg::Gds(isc_expression_eval_err));
 
@@ -1240,7 +1240,7 @@ void ArithmeticNode::getDescDialect1(thread_db* /*tdbb*/, dsc* desc, dsc& desc1,
 					return;
 
 				case dtype_ex_time_tz:
-				case dtype_ex_tstamp_tz:
+				case dtype_ex_timestamp_tz:
 					fb_assert(false);
 					ERRD_post(Arg::Gds(isc_expression_eval_err));
 
@@ -1534,7 +1534,7 @@ void ArithmeticNode::getDescDialect3(thread_db* /*tdbb*/, dsc* desc, dsc& desc1,
 			switch (dtype)
 			{
 				case dtype_ex_time_tz:
-				case dtype_ex_tstamp_tz:
+				case dtype_ex_timestamp_tz:
 					fb_assert(false);
 					ERRD_post(Arg::Gds(isc_expression_eval_err));
 
@@ -2556,7 +2556,7 @@ dsc* ArithmeticNode::addDateTime(thread_db* tdbb, const dsc* desc, impure_value*
 			break;
 
 		case dtype_ex_time_tz:
-		case dtype_ex_tstamp_tz:
+		case dtype_ex_timestamp_tz:
 			fb_assert(false);
 			ERRD_post(Arg::Gds(isc_expression_eval_err));
 

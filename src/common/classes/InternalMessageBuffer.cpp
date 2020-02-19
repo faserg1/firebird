@@ -155,7 +155,7 @@ MetadataFromBlr::MetadataFromBlr(unsigned aBlrLength, const unsigned char* aBlr,
 			item->length = sizeof(ISC_TIMESTAMP_TZ);
 			break;
 
-		case blr_ex_tstamp_tz:
+		case blr_ex_timestamp_tz:
 			item->type = SQL_TIMESTAMP_TZ_EX;
 			item->length = sizeof(ISC_TIMESTAMP_TZ_EX);
 			break;

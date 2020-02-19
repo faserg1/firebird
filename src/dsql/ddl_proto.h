@@ -64,7 +64,7 @@ const USHORT blr_dtypes[] = {
 	blr_sql_time_tz,			// dtype_sql_time_tz
 	blr_timestamp_tz,			// dtype_timestamp_tz
 	blr_ex_time_tz,				// dtype_ex_time_tz
-	blr_ex_tstamp_tz			// dtype_ex_tstamp_tz
+	blr_ex_timestamp_tz			// dtype_ex_timestamp_tz
 };
 
 bool DDL_ids(const Jrd::DsqlCompilerScratch*);
