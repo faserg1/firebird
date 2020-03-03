@@ -1586,6 +1586,17 @@ void SRVR_multi_thread( rem_port* main_port, USHORT flags)
 				// handle these bytes
 				if ((portLocked && !port->port_requests_queued.value()) || !dataSize)
 				{
+					if (port->port_flags & PORT_disconnect)
+					{
+						if (portLocked)
+						{
+							port->clearRecvQue();
+							portGuard.leave();
+						}
+						port = 0;
+						continue;
+					}
+
 					// Allocate a memory block to store the request in
 					request = alloc_request();
 
@@ -2842,6 +2853,7 @@ void rem_port::disconnect(PACKET* sendL, PACKET* receiveL)
 	}
 
 	this->port_flags |= PORT_disconnect;
+	this->port_flags &= ~PORT_z_data;
 
 	if (!rdb)
 	{

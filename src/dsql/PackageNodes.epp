@@ -122,18 +122,26 @@ namespace
 
 		bool operator ==(const ParameterInfo& o) const
 		{
-			return type == o.type && number == o.number && name == o.name &&
+			return type == o.type &&
+				number == o.number &&
+				name == o.name &&
 				(fieldSource == o.fieldSource ||
 					(fb_utils::implicit_domain(fieldSource.c_str()) &&
 						fb_utils::implicit_domain(o.fieldSource.c_str()))) &&
-				fieldName == o.fieldName && relationName == o.relationName &&
+				fieldName == o.fieldName &&
+				relationName == o.relationName &&
 				collationId == o.collationId &&
 				nullFlag.orElse(FALSE) == o.nullFlag.orElse(FALSE) &&
-				mechanism == o.mechanism && fieldLength == o.fieldLength &&
-				fieldScale == o.fieldScale && fieldType == o.fieldType &&
-				fieldSubType == o.fieldSubType && fieldSegmentLength == o.fieldSegmentLength &&
-				fieldNullFlag == o.fieldNullFlag && fieldCharLength == o.fieldCharLength &&
-				fieldCollationId == o.fieldCollationId && fieldCharSetId == o.fieldCharSetId &&
+				mechanism == o.mechanism &&
+				fieldLength == o.fieldLength &&
+				fieldScale == o.fieldScale &&
+				fieldType == o.fieldType &&
+				fieldSubType.orElse(0) == o.fieldSubType.orElse(0) &&
+				fieldSegmentLength == o.fieldSegmentLength &&
+				fieldNullFlag.orElse(FALSE) == o.fieldNullFlag.orElse(FALSE) &&
+				fieldCharLength == o.fieldCharLength &&
+				fieldCollationId.orElse(0) == o.fieldCollationId.orElse(0) &&
+				fieldCharSetId == o.fieldCharSetId &&
 				fieldPrecision == o.fieldPrecision;
 		}
 

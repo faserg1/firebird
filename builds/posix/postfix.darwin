@@ -41,9 +41,9 @@ framework:
 	mkdir -p $(FB_FW)/Versions/A/Resources/lib
 	cp ../gen/$(TARGET)/firebird/lib/libtommath.dylib $(FB_FW)/Versions/A/Resources/lib/
 	cp ../gen/$(TARGET)/firebird/lib/libfbclient.dylib $(FB_FW)/Versions/A/Resources/lib/
-	cp ../gen/$(TARGET)/firebird/lib/libicudata*.dylib $(FB_FW)/Versions/A/Resources/lib/
-	cp ../gen/$(TARGET)/firebird/lib/libicui18n*.dylib $(FB_FW)/Versions/A/Resources/lib/
-	cp ../gen/$(TARGET)/firebird/lib/libicuuc*.dylib $(FB_FW)/Versions/A/Resources/lib/
+	cp ../gen/$(TARGET)/firebird/lib/libicudata.[0-9][0-9].dylib $(FB_FW)/Versions/A/Resources/lib/
+	cp ../gen/$(TARGET)/firebird/lib/libicui18n.[0-9][0-9].dylib $(FB_FW)/Versions/A/Resources/lib/
+	cp ../gen/$(TARGET)/firebird/lib/libicuuc.[0-9][0-9].dylib $(FB_FW)/Versions/A/Resources/lib/
 	cp ../gen/$(TARGET)/firebird/lib/libib_util.dylib $(FB_FW)/Versions/A/Resources/lib/
 	ln -s ../Resources/lib/libfbclient.dylib $(FB_FW)/Versions/A/Libraries/libfbclient.dylib
 	ln -s ../Resources/lib/libib_util.dylib $(FB_FW)/Versions/A/Libraries/libib_util.dylib

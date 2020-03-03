@@ -899,6 +899,7 @@ const USHORT PORT_rdb_shutdown	= 0x0200;	// Database is shut down
 const USHORT PORT_connecting	= 0x0400;	// Aux connection waits for a channel to be activated by client
 const USHORT PORT_z_data		= 0x0800;	// Zlib incoming buffer has data left after decompression
 const USHORT PORT_compressed	= 0x1000;	// Compress outgoing stream (does not affect incoming)
+const USHORT PORT_released		= 0x2000;	// release(), complementary to the first addRef() in constructor, was called 
 
 // forward decl
 class RemotePortGuard;
@@ -1064,6 +1065,14 @@ public:
 private:
 	~rem_port();	// this is refCounted object - private dtor is OK
 
+	// Don't allow callers to use release() directly, they must use RefPtr or call releasePort()
+	virtual int release() const
+	{
+		return RefCounted::release();
+	}
+
+	friend class Firebird::RefPtr<rem_port>;
+
 public:
 	void initCompression();
 	static bool checkCompression();
@@ -1141,6 +1150,16 @@ public:
 		}
 	}
 
+	// release reference that was created in constructor
+	bool releasePort()
+	{
+		if (port_flags & PORT_released)
+			return false;
+
+		port_flags |= PORT_released;
+		release();
+		return true;
+	}
 
 public:
 	// TMN: Beginning of C++ port
@@ -1275,7 +1294,7 @@ private:
 				Thread::waitForCompletion(waitHandle);
 				fb_assert(asyncPort);
 				if (asyncPort)
-					asyncPort->release();
+					asyncPort->releasePort();
 			}
 			else if (asyncPort)
 				asyncPort->port_thread_guard = NULL;

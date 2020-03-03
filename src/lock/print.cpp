@@ -356,7 +356,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		if (*p++ != '-')
 		{
 			FPRINTF(outfile, "%s", usage);
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 		SCHAR c;
 		while (c = *p++)
@@ -364,7 +364,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 			{
 			case '?':
 				FPRINTF(outfile, "%s", usage);
-				exit(FINI_OK);
+				return FINI_OK;
 				break;
 
 			case 'o':
@@ -401,7 +401,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 				if (sw_series <= 0)
 				{
 					FPRINTF(outfile, "Please specify a positive value following option -s\n");
-					exit(FINI_OK);
+					return FINI_OK;
 				}
 				--argc;
 				break;
@@ -428,7 +428,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 
 					default:
 						FPRINTF(outfile, "Valid interactive switches are: a, o, t, w\n");
-						exit(FINI_OK);
+						return FINI_OK;
 						break;
 					}
 				if (!sw_interactive)
@@ -446,7 +446,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 					if (sw_seconds <= 0 || sw_intervals < 0)
 					{
 						FPRINTF(outfile, "Please specify 2 positive values for option -i\n");
-						exit(FINI_OK);
+						return FINI_OK;
 					}
 				}
 				--p;
@@ -465,7 +465,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 				else
 				{
 					FPRINTF(outfile, "Usage: -f <filename>\n");
-					exit(FINI_OK);
+					return FINI_OK;
 				}
 				break;
 
@@ -478,7 +478,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 				else
 				{
 					FPRINTF(outfile, "Usage: -d <filename>\n");
-					exit(FINI_OK);
+					return FINI_OK;
 				}
 				break;
 
@@ -492,7 +492,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 
 			default:
 				FPRINTF(outfile, "%s", usage);
-				exit(FINI_OK);
+				return FINI_OK;
 				break;
 			}
 	}
@@ -502,7 +502,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 	if (db_file && lock_file)
 	{
 		FPRINTF(outfile, "Switches -d and -f cannot be specified together\n");
-		exit(FINI_OK);
+		return FINI_OK;
 	}
 	else if (db_file)
 	{
@@ -518,7 +518,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		if (h == INVALID_HANDLE_VALUE)
 		{
 			FPRINTF(outfile, "Unable to open the database file (%d).\n", GetLastError());
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 		BY_HANDLE_FILE_INFORMATION file_info;
 		GetFileInformationByHandle(h, &file_info);
@@ -537,7 +537,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		if (stat(db_name.c_str(), &statistics) == -1)
 		{
 			FPRINTF(outfile, "Unable to open the database file.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 		const size_t len1 = sizeof(statistics.st_dev);
 		const size_t len2 = sizeof(statistics.st_ino);
@@ -565,7 +565,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 	{
 		FPRINTF(outfile, "Please specify either -d <database name> or -f <lock file name>\n\n");
 		FPRINTF(outfile, "%s", usage);
-		exit(FINI_OK);
+		return FINI_OK;
 	}
 
 	Firebird::AutoPtr<UCHAR> buffer;
@@ -587,7 +587,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		{
 			// Mapped file is obviously too small to really be a lock file
 			FPRINTF(outfile, "Unable to access lock table - file too small.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		if (sw_consistency)
@@ -607,7 +607,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		catch (const Firebird::BadAlloc&)
 		{
 			FPRINTF(outfile, "Insufficient memory for lock statistics.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		memcpy((UCHAR*) buffer, LOCK_header, extentSize);
@@ -621,7 +621,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 			if (! extData.mapFile(statusVector, extName.c_str(), 0))
 			{
 				FPRINTF(outfile, "Could not map extent number %d, file %s.\n", extent, extName.c_str());
-				exit(FINI_OK);
+				return FINI_OK;
 			}
 
 			memcpy(((UCHAR*) buffer) + extent * extentSize, extData.sh_mem_header, extentSize);
@@ -658,7 +658,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 			{
 				FPRINTF(outfile, "Insufficient memory for consistent lock statistics.\n");
 				FPRINTF(outfile, "Try omitting the -c switch.\n");
-				exit(FINI_OK);
+				return FINI_OK;
 			}
 
 			memcpy((UCHAR*) buffer, LOCK_header, LOCK_header->lhb_length);
@@ -676,7 +676,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		ex.stuffException(st);
 		gds__print_status(st.begin());
 
-		exit(FINI_OK);
+		return FINI_OK;
 	  }
 	}
 	else if (lock_file)
@@ -685,7 +685,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		if (fd == -1)
 		{
 			FPRINTF(outfile, "Unable to open lock file.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		struct stat file_stat;
@@ -693,14 +693,14 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		{
 			close(fd);
 			FPRINTF(outfile, "Unable to retrieve lock file size.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		if (!file_stat.st_size)
 		{
 			close(fd);
 			FPRINTF(outfile, "Lock file is empty.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		try
@@ -710,7 +710,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		catch (const Firebird::BadAlloc&)
 		{
 			FPRINTF(outfile, "Insufficient memory to read lock file.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		LOCK_header = (lhb*)(UCHAR*) buffer;
@@ -720,7 +720,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		if (bytes_read != file_stat.st_size)
 		{
 			FPRINTF(outfile, "Unable to read lock file.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 #ifdef USE_SHMEM_EXT
@@ -736,7 +736,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		catch (const Firebird::BadAlloc&)
 		{
 			FPRINTF(outfile, "Insufficient memory for lock statistics.\n");
-			exit(FINI_OK);
+			return FINI_OK;
 		}
 
 		memcpy(newBuf, LOCK_header, extentSize);
@@ -752,14 +752,14 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 			{
 				FPRINTF(outfile, "Unable to open lock file extent number %d, file %s.\n",
 						extent, extName.c_str());
-				exit(FINI_OK);
+				return FINI_OK;
 			}
 
 			if (read(fd, ((UCHAR*) buffer) + extent * extentSize, extentSize) != extentSize)
 			{
 				FPRINTF(outfile, "Could not read lock file extent number %d, file %s.\n",
 						extent, extName.c_str());
-				exit(FINI_OK);
+				return FINI_OK;
 			}
 			close(fd);
 		}
@@ -788,7 +788,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 			FPRINTF(outfile, "\tUnable to read lock table version %d:%d.\n",
 				LOCK_header->mhb_header_version, LOCK_header->mhb_version);
 		}
-		exit(FINI_OK);
+		return FINI_OK;
 	}
 
 	// Print lock activity report
@@ -798,7 +798,7 @@ int CLIB_ROUTINE main( int argc, char *argv[])
 		sw_html_format = false;
 		prt_lock_activity(outfile, LOCK_header, sw_interactive,
 						  (ULONG) sw_seconds, (ULONG) sw_intervals);
-		exit(FINI_OK);
+		return FINI_OK;
 	}
 
 	// Print lock header block

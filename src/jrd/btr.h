@@ -262,6 +262,8 @@ struct IndexCreation
 	jrd_tra* transaction;
 	USHORT key_length;
 	Firebird::AutoPtr<Sort> sort;
+	SINT64 dup_recno;
+	SLONG duplicates;
 };
 
 // Class used to report any index related errors

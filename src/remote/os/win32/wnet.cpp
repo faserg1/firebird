@@ -756,7 +756,7 @@ static void disconnect(rem_port* port)
 	if (port->port_thread_guard && port->port_events_thread && !Thread::isCurrent(port->port_events_threadId))
 		port->port_thread_guard->setWait(port->port_events_thread);
 	else
-		port->release();
+		port->releasePort();
 }
 
 

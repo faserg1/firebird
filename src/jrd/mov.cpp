@@ -54,6 +54,8 @@ int MOV_compare(const dsc* arg1, const dsc* arg2)
  *	Compare two descriptors.  Return (-1, 0, 1) if a<b, a=b, or a>b.
  *
  **************************************/
+	fb_assert(!(arg1->dsc_flags & DSC_null));
+	fb_assert(!(arg2->dsc_flags & DSC_null));
 
 	return CVT2_compare(arg1, arg2);
 }
