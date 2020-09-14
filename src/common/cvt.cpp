@@ -42,7 +42,10 @@
 #include <ctype.h>
 #include "gen/iberror.h"
 
+#include "../jrd/constants.h"
+#include "../common/intlobj_new.h"
 #include "../common/gdsassert.h"
+#include "../common/CharSet.h"
 #include "../common/classes/timestamp.h"
 #include "../common/cvt.h"
 #include "../jrd/intl.h"
@@ -379,7 +382,7 @@ static void integer_to_text(const dsc* from, dsc* to, Callbacks* cb)
 	// fits.  Keep in mind that routine handles both string and varying
 	// string fields.
 
-	const USHORT length = l + neg + decimal + pad_count;
+	USHORT length = l + neg + decimal + pad_count;
 
 	if ((to->dsc_dtype == dtype_text && length > to->dsc_length) ||
 		(to->dsc_dtype == dtype_cstring && length >= to->dsc_length) ||
@@ -417,7 +420,7 @@ static void integer_to_text(const dsc* from, dsc* to, Callbacks* cb)
 		} while (++scale);
 	}
 
-	cb->validateLength(cb->getToCharset(to->getCharSet()), length, start, TEXT_LEN(to));
+	length = cb->validateLength(cb->getToCharset(to->getCharSet()), length, start, TEXT_LEN(to));
 
 	// If padding is required, do it now.
 
@@ -1477,13 +1480,15 @@ void CVT_move_common(const dsc* from, dsc* to, Callbacks* cb)
 				if (to->dsc_dtype == dtype_varying)
 					ptr += sizeof(USHORT);
 
-				if (len < from->dsc_length)
+				Jrd::CharSet* charSet = cb->getToCharset(to->getCharSet());
+
+				if (len / charSet->maxBytesPerChar() < from->dsc_length)
 				{
 					cb->err(Arg::Gds(isc_arith_except) << Arg::Gds(isc_string_truncation) <<
-						Arg::Gds(isc_trunc_limits) << Arg::Num(len) << Arg::Num(from->dsc_length));
+						Arg::Gds(isc_trunc_limits) << Arg::Num(len / charSet->maxBytesPerChar()) <<
+						Arg::Num(from->dsc_length));
 				}
 
-				Jrd::CharSet* charSet = cb->getToCharset(to->getCharSet());
 				cb->validateData(charSet, from->dsc_length, from->dsc_address);
 
 				memcpy(ptr, from->dsc_address, from->dsc_length);
@@ -1556,8 +1561,32 @@ void CVT_move_common(const dsc* from, dsc* to, Callbacks* cb)
 				const UCHAR* start = to->dsc_address;
 				UCHAR fill_char = ASCII_SPACE;
 				Jrd::CharSet* toCharset = cb->getToCharset(charset2);
-				ULONG toLength;
-				ULONG fill;
+
+				switch (to->dsc_dtype)
+				{
+				case dtype_text:
+					length = MIN(length, to->dsc_length);
+					break;
+
+				case dtype_cstring:
+					// Note: Following is only correct for narrow and
+					// multibyte character sets which use a zero
+					// byte to represent end-of-string
+
+					fb_assert(to->dsc_length > 0);
+					length = MIN(length, ULONG(to->dsc_length - 1));
+					break;
+
+				case dtype_varying:
+					length = to->dsc_length > sizeof(USHORT) ?
+						MIN(length, (ULONG(to->dsc_length) - sizeof(USHORT))) : 0;
+					break;
+				}
+
+				cb->validateData(toCharset, length, q);
+				ULONG toLength = cb->validateLength(toCharset, length, q, to_size);
+				len -= toLength;
+				ULONG fill = ULONG(to->dsc_length) - toLength;
 
 				if (charset2 == ttype_binary)
 					fill_char = 0x00;
@@ -1565,14 +1594,7 @@ void CVT_move_common(const dsc* from, dsc* to, Callbacks* cb)
 				switch (to->dsc_dtype)
 				{
 				case dtype_text:
-					length = MIN(length, to->dsc_length);
-					cb->validateData(toCharset, length, q);
-					toLength = length;
-
-					len -= length;
-					fill = ULONG(to->dsc_length) - length;
-
-					CVT_COPY_BUFF(q, p, length);
+					CVT_COPY_BUFF(q, p, toLength);
 					if (fill > 0)
 					{
 						memset(p, fill_char, fill);
@@ -1584,44 +1606,32 @@ void CVT_move_common(const dsc* from, dsc* to, Callbacks* cb)
 					break;
 
 				case dtype_cstring:
-					// Note: Following is only correct for narrow and
-					// multibyte character sets which use a zero
-					// byte to represent end-of-string
-
-					fb_assert(to->dsc_length > 0);
-					length = MIN(length, ULONG(to->dsc_length - 1));
-					cb->validateData(toCharset, length, q);
-					toLength = length;
-
-					len -= length;
-					CVT_COPY_BUFF(q, p, length);
+					CVT_COPY_BUFF(q, p, toLength);
 					*p = 0;
 					break;
 
 				case dtype_varying:
-					length = MIN(length, (ULONG(to->dsc_length) - sizeof(USHORT)));
-					cb->validateData(toCharset, length, q);
-					toLength = length;
-
-					len -= length;
-					// TMN: Here we should really have the following fb_assert
-					// fb_assert(length <= MAX_USHORT);
-					((vary*) p)->vary_length = (USHORT) length;
-					start = p = reinterpret_cast<UCHAR*>(((vary*) p)->vary_string);
-					CVT_COPY_BUFF(q, p, length);
+					if (to->dsc_length > sizeof(USHORT))
+					{
+						// TMN: Here we should really have the following fb_assert
+						// fb_assert(length <= MAX_USHORT);
+						((vary*) p)->vary_length = (USHORT) toLength;
+						start = p = reinterpret_cast<UCHAR*>(((vary*) p)->vary_string);
+						CVT_COPY_BUFF(q, p, toLength);
+					}
+					else
+						memset(to->dsc_address, 0, to->dsc_length);		// the best we can do
 					break;
 				}
 
-				cb->validateLength(toCharset, toLength, start, to_size);
-
-				if (len)
+				if (len && toLength == length)
 				{
 					// Scan the truncated string to ensure only spaces lost
 					// Warning: it is correct only for narrow and multi-byte
 					// character sets which use ASCII or NULL for the SPACE character
 
 					do {
-						if (*q++ != fill_char)
+						if (*q++ != fill_char && toLength == length)
 						{
 							cb->err(Arg::Gds(isc_arith_except) << Arg::Gds(isc_string_truncation) <<
 									Arg::Gds(isc_trunc_limits) <<
@@ -2631,7 +2641,7 @@ static SINT64 hex_to_value(const char*& string, const char* end)
 	int nibble = ((end - string) & 1);
 	char ch;
 
-	while ((DIGIT((ch = UPPER(*string)))) || ((ch >= 'A') && (ch <= 'F')))
+	while ((string < end) && ((DIGIT((ch = UPPER(*string)))) || ((ch >= 'A') && (ch <= 'F'))))
 	{
 		// Now convert the character to a nibble
 		SSHORT c;
@@ -2683,7 +2693,7 @@ namespace
 		virtual CHARSET_ID getChid(const dsc* d);
 		virtual Jrd::CharSet* getToCharset(CHARSET_ID charset2);
 		virtual void validateData(Jrd::CharSet* toCharset, SLONG length, const UCHAR* q);
-		virtual void validateLength(Jrd::CharSet* toCharset, SLONG toLength, const UCHAR* start,
+		virtual ULONG validateLength(Jrd::CharSet* toCharset, SLONG toLength, const UCHAR* start,
 			const USHORT to_size);
 		virtual SLONG getCurDate();
 		virtual void isVersion4(bool& v4);
@@ -2704,8 +2714,9 @@ namespace
 	{
 	}
 
-	void CommonCallbacks::validateLength(Jrd::CharSet*, SLONG, const UCHAR*, const USHORT)
+	ULONG CommonCallbacks::validateLength(Jrd::CharSet*, SLONG len, const UCHAR*, const USHORT)
 	{
+		return len;
 	}
 
 	CHARSET_ID CommonCallbacks::getChid(const dsc* d)

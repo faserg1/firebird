@@ -302,6 +302,9 @@ interface ConfigManager : Versioned
 	Config getPluginConfig(const string configuredPlugin);
 	const string getInstallDirectory();
 	const string getRootDirectory();
+
+version:		// 3.0.5 => 3.0.6
+	const string getDefaultSecurityDb();
 }
 
 

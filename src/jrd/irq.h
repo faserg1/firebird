@@ -51,6 +51,7 @@ enum irq_type_t
 	irq_v_security_o,		// verify security for role
 	irq_l_index,			// lookup index id
 	irq_l_functions,		// lookup function
+	irq_l_funct_blr,		// lookup function BLR and debug info
 	irq_l_args,				// lookup function arguments
 	irq_s_triggers,			// scan triggers
 	irq_s_triggers2,		// scan triggers
@@ -90,6 +91,7 @@ enum irq_type_t
 	irq_r_params,			// scan procedure parameters
 
 	irq_r_procedure,		// scan procedure
+	irq_r_proc_blr,			// look for procedure's BLR and debug info
 	irq_pkg_security,		// verify security for package
 	irq_p_security,			// verify security for procedure
 	irq_c_prc_dpd,			// create procedure dependencies for delete

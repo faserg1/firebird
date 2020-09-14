@@ -3739,7 +3739,7 @@ bool VIO_sweep(thread_db* tdbb, jrd_tra* transaction, TraceSweepEvent* traceSwee
 						break;
 
 					if (--tdbb->tdbb_quantum < 0)
-						JRD_reschedule(tdbb, SWEEP_QUANTUM, true);
+						JRD_reschedule(tdbb, true);
 
 					transaction->tra_oldest_active = dbb->dbb_oldest_snapshot;
 				}
@@ -4787,7 +4787,7 @@ static void garbage_collect(thread_db* tdbb, record_param* rpb, ULONG prior_page
 
 		// Don't monopolize the server while chasing long back version chains.
 		if (--tdbb->tdbb_quantum < 0)
-			JRD_reschedule(tdbb, 0, true);
+			JRD_reschedule(tdbb, true);
 	}
 
 	IDX_garbage_collect(tdbb, rpb, going, staying);
@@ -4866,7 +4866,7 @@ void Database::garbage_collector(Database* dbb)
 		UserId user;
 		user.usr_user_name = "Garbage Collector";
 
-		Jrd::Attachment* const attachment = Jrd::Attachment::create(dbb);
+		Jrd::Attachment* const attachment = Jrd::Attachment::create(dbb, NULL);
 		RefPtr<SysStableAttachment> sAtt(FB_NEW SysStableAttachment(attachment));
 		attachment->setStable(sAtt);
 		attachment->att_filename = dbb->dbb_filename;
@@ -4874,8 +4874,7 @@ void Database::garbage_collector(Database* dbb)
 		attachment->att_user = &user;
 
 		BackgroundContextHolder tdbb(dbb, attachment, &status_vector, FB_FUNCTION);
-		tdbb->tdbb_quantum = SWEEP_QUANTUM;
-		tdbb->tdbb_flags = TDBB_sweeper;
+		tdbb->markAsSweeper();
 
 		record_param rpb;
 		rpb.getWindow(tdbb).win_flags = WIN_garbage_collector;
@@ -5020,7 +5019,7 @@ void Database::garbage_collector(Database* dbb)
 								}
 
 								if (--tdbb->tdbb_quantum < 0)
-									JRD_reschedule(tdbb, SWEEP_QUANTUM, true);
+									JRD_reschedule(tdbb, true);
 
 								if (rpb.rpb_number >= last)
 									break;
@@ -5043,7 +5042,7 @@ void Database::garbage_collector(Database* dbb)
 
 				if (found)
 				{
-					JRD_reschedule(tdbb, SWEEP_QUANTUM, true);
+					JRD_reschedule(tdbb, true);
 				}
 				else
 				{
@@ -5350,7 +5349,7 @@ static void list_staying_fast(thread_db* tdbb, record_param* rpb, RecordStack& s
 
 		// Don't monopolize the server while chasing long back version chains.
 		if (--tdbb->tdbb_quantum < 0)
-			JRD_reschedule(tdbb, 0, true);
+			JRD_reschedule(tdbb, true);
 	}
 
 	delete backout_rec;
@@ -5460,7 +5459,7 @@ static void list_staying(thread_db* tdbb, record_param* rpb, RecordStack& stayin
 
 			// Don't monopolize the server while chasing long back version chains.
 			if (--tdbb->tdbb_quantum < 0)
-				JRD_reschedule(tdbb, 0, true);
+				JRD_reschedule(tdbb, true);
 		}
 
 		if (timed_out)

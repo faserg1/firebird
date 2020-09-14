@@ -119,17 +119,6 @@ IMetadataBuilder* MasterImplementation::getMetadataBuilder(CheckStatusWrapper* s
 	}
 }
 
-/***
-IDebug* MasterImplementation::getDebug()
-{
-#ifdef DEV_BUILD
-	return getImpDebug();
-#else
-	return NULL;
-#endif
-}
-***/
-
 int MasterImplementation::serverMode(int mode)
 {
 	static int currentMode = -1;

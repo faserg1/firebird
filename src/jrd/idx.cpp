@@ -496,7 +496,7 @@ void IDX_create_index(thread_db* tdbb,
 			break;
 
 		if (--tdbb->tdbb_quantum < 0)
-			JRD_reschedule(tdbb, 0, true);
+			JRD_reschedule(tdbb, true);
 	}
 
 	gc_record.release();

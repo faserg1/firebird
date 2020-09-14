@@ -105,8 +105,6 @@ namespace EDS {
 
 namespace Jrd {
 
-const int QUANTUM				= 100;	// Default quantum
-const int SWEEP_QUANTUM			= 10;	// Make sweeps less disruptive
 const unsigned MAX_CALLBACKS	= 50;
 
 // fwd. decl.
@@ -252,6 +250,9 @@ public:
 
 	virtual bool checkCache(thread_db* tdbb) const;
 	virtual void clearCache(thread_db* tdbb);
+
+protected:
+	virtual bool reload(thread_db* tdbb);	// impl is in met.epp
 };
 
 
@@ -369,6 +370,9 @@ const USHORT TDBB_dfw_cleanup			= 16384;	// DFW cleanup phase is active
 
 class thread_db : public Firebird::ThreadData
 {
+	static const int QUANTUM		= 100;	// Default quantum
+	static const int SWEEP_QUANTUM	= 10;	// Make sweeps less disruptive
+
 private:
 	MemoryPool*	defaultPool;
 	void setDefaultPool(MemoryPool* p)
@@ -478,6 +482,12 @@ public:
 
 	SSHORT getCharSet() const;
 
+	void markAsSweeper()
+	{
+		tdbb_quantum = SWEEP_QUANTUM;
+		tdbb_flags |= TDBB_sweeper;
+	}
+
 	void bumpStats(const RuntimeStatistics::StatType index, SINT64 delta = 1)
 	{
 		reqStat->bumpValue(index, delta);
@@ -516,7 +526,7 @@ public:
 
 	ISC_STATUS checkCancelState();
 	bool checkCancelState(bool punt);
-	bool reschedule(SLONG quantum, bool punt);
+	bool reschedule(bool punt);
 
 	void registerBdb(BufferDesc* bdb)
 	{
@@ -631,6 +641,24 @@ private:
 	thread_db context;
 };
 
+// Helper class to temporarily activate sweeper context
+class ThreadSweepGuard
+{
+public:
+	explicit ThreadSweepGuard(thread_db* tdbb)
+		: m_tdbb(tdbb)
+	{
+		m_tdbb->markAsSweeper();
+	}
+
+	~ThreadSweepGuard()
+	{
+		m_tdbb->tdbb_flags &= ~TDBB_sweeper;
+	}
+
+private:
+	thread_db* const m_tdbb;
+};
 
 // CVC: This class was designed to restore the thread's default status vector automatically.
 // In several places, tdbb_status_vector is replaced by a local temporary.
@@ -706,9 +734,9 @@ typedef Firebird::HalfStaticArray<UCHAR, 256> MoveBuffer;
 
 } //namespace Jrd
 
-inline bool JRD_reschedule(Jrd::thread_db* tdbb, SLONG quantum, bool punt)
+inline bool JRD_reschedule(Jrd::thread_db* tdbb, bool punt)
 {
-	return tdbb->reschedule(quantum, punt);
+	return tdbb->reschedule(punt);
 }
 
 // Threading macros

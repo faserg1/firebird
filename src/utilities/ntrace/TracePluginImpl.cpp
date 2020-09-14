@@ -35,7 +35,6 @@
 #include "consts_pub.h"
 #include "codetext.h"
 #include "../../common/isc_f_proto.h"
-#include "../../jrd/RuntimeStatistics.h"
 #include "../../common/dsc.h"
 #include "../../common/utils_proto.h"
 #include "../../common/UtilSvc.h"
@@ -486,25 +485,25 @@ void TracePluginImpl::appendGlobalCounts(const PerformanceInfo* info)
 
 	ntrace_counter_t cnt;
 
-	if ((cnt = info->pin_counters[RuntimeStatistics::PAGE_READS]) != 0)
+	if ((cnt = info->pin_counters[PerformanceInfo::READS]) != 0)
 	{
 		temp.printf(", %" QUADFORMAT"d read(s)", cnt);
 		record.append(temp);
 	}
 
-	if ((cnt = info->pin_counters[RuntimeStatistics::PAGE_WRITES]) != 0)
+	if ((cnt = info->pin_counters[PerformanceInfo::WRITES]) != 0)
 	{
 		temp.printf(", %" QUADFORMAT"d write(s)", cnt);
 		record.append(temp);
 	}
 
-	if ((cnt = info->pin_counters[RuntimeStatistics::PAGE_FETCHES]) != 0)
+	if ((cnt = info->pin_counters[PerformanceInfo::FETCHES]) != 0)
 	{
 		temp.printf(", %" QUADFORMAT"d fetch(es)", cnt);
 		record.append(temp);
 	}
 
-	if ((cnt = info->pin_counters[RuntimeStatistics::PAGE_MARKS]) != 0)
+	if ((cnt = info->pin_counters[PerformanceInfo::MARKS]) != 0)
 	{
 		temp.printf(", %" QUADFORMAT"d mark(s)", cnt);
 		record.append(temp);
@@ -530,7 +529,7 @@ void TracePluginImpl::appendTableCounts(const PerformanceInfo *info)
 	{
 		record.append(trc->trc_relation_name);
 		record.append(MAX_SQL_IDENTIFIER_LEN - fb_strlen(trc->trc_relation_name), ' ');
-		for (int j = 0; j < DBB_max_rel_count; j++)
+		for (int j = 0; j <= TraceCounts::EXPUNGES; j++)
 		{
 			if (trc->trc_counters[j] == 0)
 			{

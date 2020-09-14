@@ -927,6 +927,7 @@ public:
 		  verboseInterval(10000),
 		  flag_on_line(true),
 		  firstMap(true),
+		  firstDbc(true),
 		  stdIoMode(false)
 	{
 		// this is VERY dirty hack to keep current behaviour

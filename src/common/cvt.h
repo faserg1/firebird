@@ -56,7 +56,7 @@ public:
 	virtual CHARSET_ID getChid(const dsc* d) = 0;
 	virtual Jrd::CharSet* getToCharset(CHARSET_ID charset2) = 0;
 	virtual void validateData(Jrd::CharSet* toCharset, SLONG length, const UCHAR* q) = 0;
-	virtual void validateLength(Jrd::CharSet* toCharset, SLONG toLength, const UCHAR* start,
+	virtual ULONG validateLength(Jrd::CharSet* toCharset, SLONG toLength, const UCHAR* start,
 		const USHORT to_size) = 0;
 	virtual SLONG getCurDate() = 0;
 	virtual void isVersion4(bool& v4) = 0;

@@ -228,7 +228,7 @@ public:
 	};
 
 public:
-	static Attachment* create(Database* dbb);
+	static Attachment* create(Database* dbb, Firebird::IProvider* provider);
 	static void destroy(Attachment* const attachment);
 
 	MemoryPool* const att_pool;					// Memory pool
@@ -384,9 +384,17 @@ public:
 
 	JAttachment* getInterface() throw();
 
+	Firebird::IProvider* getProvider()
+	{
+		fb_assert(att_provider);
+		return att_provider;
+	}
+
 private:
-	Attachment(MemoryPool* pool, Database* dbb);
+	Attachment(MemoryPool* pool, Database* dbb, Firebird::IProvider* provider);
 	~Attachment();
+
+	Firebird::IProvider* att_provider;	// Provider which created this attachment
 };
 
 
@@ -405,7 +413,6 @@ const ULONG ATT_cancel_disable		= 0x00200L;	// Disable cancel operations
 const ULONG ATT_no_db_triggers		= 0x00400L;	// Don't execute database triggers
 const ULONG ATT_manual_lock			= 0x00800L;	// Was locked manually
 const ULONG ATT_async_manual_lock	= 0x01000L;	// Async mutex was locked manually
-const ULONG ATT_monitor_init		= 0x02000L; // Attachment is registered in monitoring
 const ULONG ATT_overwrite_check		= 0x02000L;	// Attachment checks is it possible to overwrite DB
 const ULONG ATT_system				= 0x04000L; // Special system attachment
 const ULONG ATT_creator				= 0x08000L; // This attachment created the DB
@@ -413,6 +420,7 @@ const ULONG ATT_monitor_done		= 0x10000L; // Monitoring data is refreshed
 const ULONG ATT_security_db			= 0x20000L; // Attachment used for security purposes
 const ULONG ATT_mapping				= 0x40000L; // Attachment used for mapping auth block
 const ULONG ATT_crypt_thread		= 0x80000L; // Attachment from crypt thread
+const ULONG ATT_monitor_init		= 0x100000L; // Attachment is registered in monitoring
 
 const ULONG ATT_NO_CLEANUP			= (ATT_no_cleanup | ATT_notify_gc);
 

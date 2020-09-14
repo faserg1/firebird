@@ -62,6 +62,8 @@ void ProcedureScan::open(thread_db* tdbb) const
 				Arg::Str(m_procedure->getName().identifier) << Arg::Str(m_procedure->getName().package));
 	}
 
+	const_cast<jrd_prc*>(m_procedure)->checkReload(tdbb);
+
 	jrd_req* const request = tdbb->getRequest();
 	Impure* const impure = request->getImpure<Impure>(m_impure);
 
@@ -156,7 +158,7 @@ void ProcedureScan::close(thread_db* tdbb) const
 bool ProcedureScan::getRecord(thread_db* tdbb) const
 {
 	if (--tdbb->tdbb_quantum < 0)
-		JRD_reschedule(tdbb, 0, true);
+		JRD_reschedule(tdbb, true);
 
 	jrd_req* const request = tdbb->getRequest();
 	record_param* const rpb = &request->req_rpb[m_stream];

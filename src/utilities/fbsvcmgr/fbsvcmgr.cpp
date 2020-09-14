@@ -908,11 +908,17 @@ bool printInfo(const char* p, size_t pSize, UserPrint& up, ULONG& stdinRq)
 			break;
 
 		case isc_info_svc_line:
-			ret = printLine(p);
+			if (printLine(p))
+			{
+				ret = true;
+			}
 			break;
 
 		case isc_info_svc_to_eof:
-			ret = printData(p);
+			if (printData(p))
+			{
+				ret = true;
+			}
 			ignoreTruncation = true;
 			break;
 
@@ -922,8 +928,7 @@ bool printInfo(const char* p, size_t pSize, UserPrint& up, ULONG& stdinRq)
 				printf("\n%s\n", getMessage(18).c_str());
 			}
 			fflush(stdout);
-			ret = true;
-			break;
+			return true;
 
 		case isc_info_svc_timeout:
 		case isc_info_data_not_ready:

@@ -77,9 +77,9 @@ end;
 	end;
 
 	Status = class(Disposable)
-		const VERSION = 3;
+		const VERSION = 2;
 		const ERROR_1 = Integer(1);
-		const ERROR_2 = Integer(2);
+		const ERROR_2 = Integer($2);
 		const ERROR_12 = Integer(Status.ERROR_1 or Status.ERROR_2);
 
 		function getCode(): Integer;
@@ -102,7 +102,7 @@ end;
 	end;
 
 	Factory = class(Disposable)
-		const VERSION = 5;
+		const VERSION = 2;
 
 		function createStatus(): Status;
 		function createCalculator(status: Status): Calculator;
@@ -128,7 +128,7 @@ end;
 	end;
 
 	Calculator = class(Disposable)
-		const VERSION = 5;
+		const VERSION = 4;
 
 		function sum(status: Status; n1: Integer; n2: Integer): Integer;
 		function getMemory(): Integer;
@@ -153,7 +153,7 @@ end;
 	end;
 
 	Calculator2 = class(Calculator)
-		const VERSION = 8;
+		const VERSION = 6;
 
 		function multiply(status: Status; n1: Integer; n2: Integer): Integer;
 		procedure copyMemory(calculator: Calculator);

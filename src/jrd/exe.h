@@ -610,6 +610,7 @@ const int csb_post_trigger		= 32;	// this is an AFTER trigger
 const int csb_validation		= 64;	// we're in a validation expression (RDB hack)
 const int csb_reuse_context		= 128;	// allow context reusage
 const int csb_subroutine		= 256;	// sub routine
+const int csb_reload			= 512;	// request's BLR should be loaded and parsed again
 
 // CompilerScratch.csb_rpt[].csb_flags's values.
 const int csb_active		= 1;		// stream is active

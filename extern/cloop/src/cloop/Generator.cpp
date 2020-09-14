@@ -689,7 +689,7 @@ void CHeaderGenerator::generate()
 			methods.insert(methods.begin(), p->methods.begin(), p->methods.end());
 
 		fprintf(out, "#define %s%s_VERSION %d\n\n",
-			prefix.c_str(), interface->name.c_str(), (int) methods.size());
+			prefix.c_str(), interface->name.c_str(), interface->version);
 
 		for (vector<Constant*>::iterator j = interface->constants.begin();
 			 j != interface->constants.end();
@@ -1022,12 +1022,7 @@ void PascalGenerator::generate()
 		if (!interface->super)
 			fprintf(out, "\t\tvTable: %sVTable;\n\n", escapeName(interface->name).c_str());
 
-		unsigned version = 0;
-
-		for (Interface* p = interface; p; p = p->super)
-			version += p->methods.size();
-
-		fprintf(out, "\t\tconst VERSION = %d;\n", version);
+		fprintf(out, "\t\tconst VERSION = %d;\n", interface->version);
 
 		for (vector<Constant*>::iterator j = interface->constants.begin();
 			 j != interface->constants.end();
@@ -1413,6 +1408,7 @@ string PascalGenerator::escapeName(string name, bool interfaceName)
 	if (name == "file" ||
 		name == "function" ||
 		name == "procedure" ||
+		name == "record" ||
 		name == "set" ||
 		name == "to" ||
 		name == "type")

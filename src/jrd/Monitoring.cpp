@@ -134,7 +134,7 @@ MonitoringData::MonitoringData(const Database* dbb)
 
 MonitoringData::~MonitoringData()
 {
-	m_sharedMemory->mutexLock();
+	Guard guard(this);
 
 	try
 	{
@@ -146,8 +146,6 @@ MonitoringData::~MonitoringData()
 	}
 	catch (const Exception&)
 	{} // no-op
-
-	m_sharedMemory->mutexUnlock();
 }
 
 

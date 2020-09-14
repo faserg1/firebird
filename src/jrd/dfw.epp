@@ -5824,55 +5824,6 @@ static bool make_version(thread_db* tdbb, SSHORT phase, DeferredWork* work, jrd_
 					tfb->tfb_next = stack;
 					stack = tfb;
 
-					memset(&tfb->tfb_default, 0, sizeof(tfb->tfb_default));
-
-					if (notNull && !defaultValue->isEmpty())
-					{
-						Jrd::ContextPoolHolder context(tdbb, attachment->createPool());
-						JrdStatement* defaultStatement = NULL;
-						try
-						{
-							ValueExprNode* defaultNode = static_cast<ValueExprNode*>(MET_parse_blob(
-								tdbb, relation, defaultValue, NULL, &defaultStatement, false, false));
-
-							jrd_req* const defaultRequest = defaultStatement->findRequest(tdbb);
-
-							// Attention: this is scoped to the end of this "try".
-							AutoSetRestore2<jrd_req*, thread_db> autoRequest(tdbb,
-								&thread_db::getRequest, &thread_db::setRequest, defaultRequest);
-
-							defaultRequest->req_timestamp.validate();
-
-							TRA_attach_request(transaction, defaultRequest);
-							dsc* result = EVL_expr(tdbb, defaultRequest, defaultNode);
-							TRA_detach_request(defaultRequest);
-
-							if (result)
-							{
-								dsc desc = *result;
-								MoveBuffer buffer;
-
-								if (desc.isText() || desc.isBlob())
-								{
-									UCHAR* ptr = NULL;
-									const int len = MOV_make_string2(tdbb, &desc, CS_NONE, &ptr, buffer, true);
-									fb_assert(ULONG(len) < ULONG(MAX_USHORT));
-									desc.makeText(len, ttype_none, ptr);
-								}
-
-								EVL_make_value(tdbb, &desc, &tfb->tfb_default, relation->rel_pool);
-							}
-						}
-						catch (const Exception&)
-						{
-							if (defaultStatement)
-								defaultStatement->release(tdbb);
-							throw;
-						}
-
-						defaultStatement->release(tdbb);
-					}
-
 					// for text data types, grab the CHARACTER_SET and
 					// COLLATION to give the type of international text
 
@@ -5910,6 +5861,74 @@ static bool make_version(thread_db* tdbb, SSHORT phase, DeferredWork* work, jrd_
 							(DTYPE_IS_TEXT(tfb->tfb_desc.dsc_dtype) ?
 								tfb->tfb_desc.dsc_ttype() : tfb->tfb_desc.dsc_blob_ttype()));	// should punt
 						ERR_punt(); // if INTL_texttype_lookup hasn't punt
+					}
+
+					// Store the default value.
+
+					memset(&tfb->tfb_default, 0, sizeof(tfb->tfb_default));
+
+					if (notNull && !defaultValue->isEmpty())
+					{
+						Jrd::ContextPoolHolder context(tdbb, attachment->createPool());
+						JrdStatement* defaultStatement = NULL;
+						try
+						{
+							ValueExprNode* defaultNode = static_cast<ValueExprNode*>(MET_parse_blob(
+								tdbb, relation, defaultValue, NULL, &defaultStatement, false, false));
+
+							jrd_req* const defaultRequest = defaultStatement->findRequest(tdbb);
+
+							// Attention: this is scoped to the end of this "try".
+							AutoSetRestore2<jrd_req*, thread_db> autoRequest(tdbb,
+								&thread_db::getRequest, &thread_db::setRequest, defaultRequest);
+
+							defaultRequest->req_timestamp.validate();
+
+							TRA_attach_request(transaction, defaultRequest);
+							dsc* result = EVL_expr(tdbb, defaultRequest, defaultNode);
+							TRA_detach_request(defaultRequest);
+
+							if (result)
+							{
+								dsc desc = *result;
+								MoveBuffer buffer;
+
+								if (desc.isText() || desc.isBlob())
+								{
+									UCHAR* ptr = NULL;
+									const int len = MOV_make_string2(tdbb, &desc, tfb->tfb_desc.getCharSet(),
+										&ptr, buffer, true);
+									fb_assert(ULONG(len) < ULONG(MAX_USHORT));
+									desc.makeText(len, tfb->tfb_desc.getCharSet(), ptr);
+								}
+
+								if (!tfb->tfb_desc.isBlob() && !DSC_EQUIV(result, &tfb->tfb_desc, false))
+								{
+									impure_value tempValue;
+									tempValue.vlu_desc = tfb->tfb_desc;
+
+									MoveBuffer buffer2;
+
+									if (tfb->tfb_desc.isText())
+										tempValue.vlu_desc.dsc_address = buffer2.getBuffer(tfb->tfb_desc.dsc_length);
+									else
+										tempValue.vlu_desc.dsc_address = (UCHAR*) &tempValue.vlu_misc;
+
+									MOV_move(tdbb, &desc, &tempValue.vlu_desc);
+									EVL_make_value(tdbb, &tempValue.vlu_desc, &tfb->tfb_default, relation->rel_pool);
+								}
+								else
+									EVL_make_value(tdbb, &desc, &tfb->tfb_default, relation->rel_pool);
+							}
+						}
+						catch (const Exception&)
+						{
+							if (defaultStatement)
+								defaultStatement->release(tdbb);
+							throw;
+						}
+
+						defaultStatement->release(tdbb);
 					}
 
 					// dimitr: view fields shouldn't be marked as computed

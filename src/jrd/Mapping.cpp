@@ -933,7 +933,7 @@ public:
 			check("IProvider::setDbCryptCallback", &st);
 		}
 
-		ClumpletWriter embeddedSysdba(ClumpletWriter::Tagged, 1024, isc_dpb_version1);
+		ClumpletWriter embeddedSysdba(ClumpletWriter::dpbList, 1024);
 		embeddedSysdba.insertString(isc_dpb_user_name, SYSDBA_USER_NAME, fb_strlen(SYSDBA_USER_NAME));
 		embeddedSysdba.insertByte(isc_dpb_sec_attach, TRUE);
 		embeddedSysdba.insertString(isc_dpb_config, Auth::ParsedList::getNonLoopbackProviders(aliasDb));
@@ -1160,6 +1160,45 @@ bool mapUser(string& name, string& trusted_role, Firebird::string* auth_method,
 
 	if (fName.found == Found::FND_NOTHING)
 	{
+		NoCaseString msg = "Missing security context required for ";
+		if (db)
+			msg += db;
+		if (db && securityAlias)
+			msg += " or ";
+		if (securityAlias)
+			msg += secExpanded.c_str();
+
+		msg += "\n\tAvailable context(s): ";
+		bool fstCtx = true;
+		for (AuthReader scan(newBlock); scan.getInfo(info); scan.moveNext())
+		{
+			if (info.type == NM_USER || info.type == NM_ROLE)
+			{
+				if (!fstCtx)
+					msg += "\n\t\t";
+				else
+					fstCtx = false;
+
+				msg += info.type;
+				msg += ' ';
+				msg += info.name;
+				if (info.secDb.hasData())
+				{
+					msg += " in ";
+					msg += info.secDb;
+				}
+				if (info.plugin.hasData())
+				{
+					msg += " plugin ";
+					msg += info.plugin;
+				}
+			}
+		}
+		if (fstCtx)
+			msg += "<none>";
+
+		gds__log("%s", msg.c_str());
+
 		Arg::Gds v(isc_sec_context);
 		v << alias;
 		if (secDown || dbDown)
@@ -1236,8 +1275,7 @@ RecordBuffer* MappingList::getList(thread_db* tdbb, jrd_rel* relation)
 	{
 		const char* dbName = tdbb->getDatabase()->dbb_config->getSecurityDatabase();
 
-		ClumpletWriter embeddedSysdba(ClumpletWriter::Tagged,
-			MAX_DPB_SIZE, isc_dpb_version1);
+		ClumpletWriter embeddedSysdba(ClumpletWriter::dpbList, MAX_DPB_SIZE);
 		embeddedSysdba.insertString(isc_dpb_user_name, SYSDBA_USER_NAME,
 			fb_strlen(SYSDBA_USER_NAME));
 		embeddedSysdba.insertByte(isc_dpb_sec_attach, TRUE);

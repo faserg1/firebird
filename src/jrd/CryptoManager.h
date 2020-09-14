@@ -284,7 +284,7 @@ public:
 	void detach(thread_db* tdbb, Attachment* att);
 
 	void startCryptThread(thread_db* tdbb);
-	void terminateCryptThread(thread_db* tdbb, bool wait = false);
+	void terminateCryptThread(thread_db* tdbb, bool wait);
 	void stopThreadUsing(thread_db* tdbb, Attachment* att);
 
 	class IOCallback

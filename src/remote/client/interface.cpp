@@ -3308,6 +3308,7 @@ void ResultSet::freeClientData(CheckStatusWrapper* status, bool force)
 		{
 			defer_packet(rdb->rdb_port, packet);
 			packet->p_resp.p_resp_object = statement->rsr_id;
+			statement->clearException();
 		}
 		else
 		{

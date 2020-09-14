@@ -78,6 +78,7 @@ namespace Jrd
 															// so dfw.epp:modify_procedure() can flip procedure body without
 															// invalidating procedure pointers from other parts of metadata cache
 		static const USHORT FLAG_CHECK_EXISTENCE	= 16;	// Existence lock released
+		static const USHORT FLAG_RELOAD		 		= 32;	// Recompile before execution
 
 		static const USHORT MAX_ALTER_COUNT = 64;	// Number of times an in-cache routine can be altered
 
@@ -112,6 +113,8 @@ namespace Jrd
 		bool isDefined() const { return defined; }
 		void setDefined(bool value) { defined = value; }
 
+		void checkReload(thread_db* tdbb);
+
 		USHORT getDefaultCount() const { return defaultCount; }
 		void setDefaultCount(USHORT value) { defaultCount = value; }
 
@@ -127,7 +130,7 @@ namespace Jrd
 		const Firebird::Array<NestConst<Parameter> >& getOutputFields() const { return outputFields; }
 		Firebird::Array<NestConst<Parameter> >& getOutputFields() { return outputFields; }
 
-		void parseBlr(thread_db* tdbb, CompilerScratch* csb, bid* blob_id);
+		void parseBlr(thread_db* tdbb, CompilerScratch* csb, bid* blob_id, bid* blobDbg);
 		void parseMessages(thread_db* tdbb, CompilerScratch* csb, Firebird::BlrReader blrReader);
 
 		bool isUsed() const
@@ -167,6 +170,10 @@ namespace Jrd
 		const Format* outputFormat;			// output format
 		Firebird::Array<NestConst<Parameter> > inputFields;		// array of field blocks
 		Firebird::Array<NestConst<Parameter> > outputFields;	// array of field blocks
+
+	protected:
+
+		virtual bool reload(thread_db* tdbb) = 0;
 
 	public:
 		USHORT flags;

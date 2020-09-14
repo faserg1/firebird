@@ -1,4 +1,245 @@
   **************************
+  * v3.0.6
+  **************************
+
+    * New feature CORE-4933
+        Better transaction control in ISQL
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Improvement CORE-6334
+        Missing relocation support on MacOS
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Improvement CORE-6274
+        Increase parsing speed of long queries
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Improvement CORE-6237
+        Performance problem when using SRP plugin
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6345
+        Server crashes on overflow of division result
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6343
+        Rolled back transaction produces unexpected results leading to duplicate values in PRIMARY KEY
+      Contributor(s):
+        Dmitry Yemanov <dimitr at firebirdsql.org>
+
+    * Bugfix CORE-6331
+        Memory leak with some statements and expressions
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6329
+        GBAK with service_mgr and WinSSPI authentication raises error in clumplet API
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6323
+        File-system ID may be duplicated among databases located on different volumes
+      Contributor(s):
+        Dmitry Yemanov <dimitr at firebirdsql.org>
+
+    * Bugfix CORE-6319
+        NBACKUP locks database file after error
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6317
+        Server is crashing on long GRANT statement
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6314
+        Assigning RDB$DB_KEY to MBCS CHAR/VARCHAR does not enforce the target limit
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6310
+        VARCHAR length limit is not enforced when assigning string with trailing spaces in MBCS
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6309
+        FBSVCMGR can not decode information buffer returned by gfix list limbo service
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6296
+        Many connections results in poor performance
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6295
+        Incomplete header files in distributed packages
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+        Paul Reeves <preeves at ibphoenix.com>
+
+    * Bugfix CORE-6290
+        Hex number used at end of statement (for example with CREATE DOMAIN ... DEFAULT) may read invalid memory and produce wrong values or exceptions
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6283
+        isNullable() in message metadata, returned by metadata builder, does not match with datatype set by setType() in metadata builder
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6280
+        MERGE statement loses parameters in WHEN (NOT) MATCHED clause that will never be matched, crashes server in some situations
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6269
+        Server (on Linux) ignores KeepAlive settings, when client connection is lost the corresponding server connection/process is not killed
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6266
+        Deleting records from MON$ATTACHMENTS using ORDER BY clause doesn't close the corresponding attachments
+      Contributor(s):
+        Dmitry Yemanov <dimitr at firebirdsql.org>
+
+    * Bugfix CORE-6265
+        Mapping rules destroyed by backup / restore
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6264
+        GBAK with PIPE to stdout: invalid content if user '-se <host>:service_mgr' command switch
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6260
+        Warnings are not always displayed in ISQL
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6254
+        AV in engine when using SET TRANSACTION and ON TRANSACTION START trigger uses EXECUTE STATEMENT against current transaction
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6253
+        Crash caused by the locked fb_lock file
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6252
+        UNIQUE CONSTRAINT violation
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6251
+        Regression: crash when built-in function LEFT() or RIGHT() missed 2nd argument (number of characters to be taken)
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6250
+        Signature mismatch when creating package body on identical packaged procedure header
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6246
+        [fbclient] Problem with too many number of columns in resultset
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6233
+        Wrong dependencies of stored function on view after backup and restore
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6231
+        Access violation on shutdown of XNET connection to local database when events have been registered
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6230
+        Unable to connect with database if security.db reference is removed from databases.conf file
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6227
+        isc_info_svc_user_dbpath always returns alias of main security database
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6224
+        Server may crash due double destruction of the rem_port object
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6221
+        Incorrect (throw-based) allocFunc for zlib1 (possible memory leak)
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6217
+        [inet.cpp] Wrong work with pointer: delete ptr; ptr=new ;
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6212
+        Authentication plugin on server may get garbage data from client instead of empty packet
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6208
+        CREATE DATABASE grant is lost in security.db after backup/restore cycle
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6189
+        Building bundled libtommath fails
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6130
+        Creating backup to stdout using service manager is broken
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6116
+        Metadata script extracted using ISQL -X of a database restored from a FB 2.5 backup is invalid when a table has COMPUTED BY field
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6110
+        64-bit transaction IDs are not stored properly in the status vector
+      Contributor(s):
+        Ilya Eremin <ilya071294 at gmail.com>
+
+    * Bugfix CORE-5972
+        External engine trigger crashing server if a table has computed field
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-5862
+        VARCHAR computed column without explicit type does not populate RDB$CHARACTER_LENGTH
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-5364
+        gfix -online normal <db> does not produce error when there is a parallel SYSDBA attachment
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-2251
+        GBAK doesn't return error code
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+
+  **************************
   * v3.0.5
   **************************
 

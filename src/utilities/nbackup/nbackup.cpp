@@ -931,7 +931,7 @@ void NBackup::attach_database()
 		status_exception::raise(Arg::Gds(isc_nbackup_userpw_toolong));
 	}
 
-	ClumpletWriter dpb(ClumpletReader::Tagged, MAX_DPB_SIZE, isc_dpb_version1);
+	ClumpletWriter dpb(ClumpletReader::dpbList, MAX_DPB_SIZE);
 
 	const unsigned char* authBlock;
 	unsigned int authBlockSize = uSvc->getAuthBlock(&authBlock);
@@ -1472,6 +1472,9 @@ void NBackup::backup_database(int level, const PathName& fname)
 	catch (const Exception&)
 	{
 		m_silent = true;
+		close_database();
+		close_backup();
+
 		if (delete_backup)
 			remove(bakname.c_str());
 		if (trans)
@@ -1684,6 +1687,10 @@ void NBackup::restore_database(const BackupFiles& files)
 	{
 		m_silent = true;
 		delete[] page_buffer;
+
+		close_database();
+		close_backup();
+
 		if (delete_database)
 			remove(dbname.c_str());
 		throw;

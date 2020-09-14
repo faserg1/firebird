@@ -488,7 +488,7 @@ public:
 	void dropDatabase(Firebird::CheckStatusWrapper* status);
 
 	void addCleanupHandler(Firebird::CheckStatusWrapper* status, CleanupCallback* callback);
-	YTransaction* getTransaction(Firebird::CheckStatusWrapper* status, Firebird::ITransaction* tra);
+	YTransaction* getTransaction(Firebird::ITransaction* tra);
 	void getNextTransaction(Firebird::CheckStatusWrapper* status, Firebird::ITransaction* tra, NextTransaction& next);
 	void execute(Firebird::CheckStatusWrapper* status, FB_API_HANDLE* traHandle,
 		unsigned int stmtLength, const char* sqlStmt, unsigned int dialect,

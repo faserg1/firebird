@@ -51,7 +51,7 @@ namespace Jrd
 		SET_TDBB(tdbb);
 
 		if (--tdbb->tdbb_quantum < 0)
-			JRD_reschedule(tdbb, 0, true);
+			JRD_reschedule(tdbb, true);
 
 		request->req_flags &= ~req_null;
 

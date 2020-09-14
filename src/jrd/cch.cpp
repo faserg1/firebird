@@ -302,14 +302,14 @@ int CCH_down_grade_dbb(void* ast_object)
 
 		AsyncContextHolder tdbb(dbb, FB_FUNCTION);
 
-		SyncLockGuard dsGuard(&dbb->dbb_sync, SYNC_EXCLUSIVE, "CCH_down_grade_dbb");
-
 		dbb->dbb_ast_flags |= DBB_blocking;
 
 		// Process the database shutdown request, if any
 
 		if (SHUT_blocking_ast(tdbb, true))
 			return 0;
+
+		SyncLockGuard dsGuard(&dbb->dbb_sync, SYNC_EXCLUSIVE, "CCH_down_grade_dbb");
 
 		// If we are already shared, there is nothing more we can do.
 		// If any case, the other guy probably wants exclusive access,
@@ -2903,7 +2903,7 @@ void BufferControl::cache_reader(BufferControl* bcb)
 		// Otherwise, wait for event notification.
 		BufferDesc* bdb;
 		if (found)
-			JRD_reschedule(tdbb, 0, true);
+			JRD_reschedule(tdbb, true);
 		else if (bcb->bcb_flags & BCB_free_pending &&
 			(bdb = get_buffer(tdbb, FREE_PAGE, LATCH_none, 1)))
 		{
@@ -2957,7 +2957,7 @@ void BufferControl::cache_writer(BufferControl* bcb)
 		UserId user;
 		user.usr_user_name = "Cache Writer";
 
-		Jrd::Attachment* const attachment = Jrd::Attachment::create(dbb);
+		Jrd::Attachment* const attachment = Jrd::Attachment::create(dbb, NULL);
 		RefPtr<SysStableAttachment> sAtt(FB_NEW SysStableAttachment(attachment));
 		attachment->setStable(sAtt);
 		attachment->att_filename = dbb->dbb_filename;
@@ -3016,7 +3016,7 @@ void BufferControl::cache_writer(BufferControl* bcb)
 
 				if ((bcb->bcb_flags & BCB_free_pending) || dbb->dbb_flush_cycle)
 				{
-					JRD_reschedule(tdbb, 0, true);
+					JRD_reschedule(tdbb, true);
 				}
 #ifdef CACHE_READER
 				else if (SBM_next(bcb->bcb_prefetch, &starting_page, RSE_get_forward))

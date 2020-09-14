@@ -407,10 +407,11 @@ int BACKUP_backup(const TEXT* dbb_file, const TEXT* file_name)
 		BURP_verbose(296);
 		// msg 296 writing mapping
 		write_mapping();
+	}
 
+	if (tdgbl->runtimeODS >= DB_VERSION_DDL12)
+	{
 		// Write database creators
-		BURP_verbose(391);
-		// msg 391 writing database creators
 		write_db_creators();
 	}
 
@@ -4174,43 +4175,48 @@ void write_db_creators()
  **************************************/
 	isc_req_handle req_handle = 0;
 	TEXT temp[GDS_NAME_LEN];
+	bool first = true;
 
 	BurpGlobals* tdgbl = BurpGlobals::getSpecific();
 
-	if (tdgbl->runtimeODS >= DB_VERSION_DDL12)
-	{
-		FOR (REQUEST_HANDLE req_handle)
-			C IN RDB$DB_CREATORS
+	FOR (REQUEST_HANDLE req_handle)
+		C IN RDB$DB_CREATORS
 
-			bool fl = true;
+		if (first)
+		{
+			BURP_verbose(391);
+			// msg 391 writing database create grants
+			first = false;
+		}
 
-			if (!C.RDB$USER_TYPE.NULL)
-			{
+		bool fl = true;
+
+		if (!C.RDB$USER_TYPE.NULL)
+		{
+			put(tdgbl, rec_db_creator);
+			fl = false;
+			put_int32(att_dbc_type, C.RDB$USER_TYPE);
+		}
+
+		if (!C.RDB$USER.NULL)
+		{
+			if (fl)
 				put(tdgbl, rec_db_creator);
-				fl = false;
-				put_int32(att_dbc_type, C.RDB$USER_TYPE);
-			}
+			fl = false;
+			const SSHORT l = PUT_TEXT(att_dbc_user, C.RDB$USER);
 
-			if (!C.RDB$USER.NULL)
-			{
-				if (fl)
-					put(tdgbl, rec_db_creator);
-				fl = false;
-				const SSHORT l = PUT_TEXT(att_dbc_user, C.RDB$USER);
+			MISC_terminate (C.RDB$USER, temp, l, sizeof(temp));
+			BURP_verbose (392, temp);
+			// msg 392 writing db creator %s
+		}
 
-				MISC_terminate (C.RDB$USER, temp, l, sizeof(temp));
-				BURP_verbose (392, temp);
-				// msg 392 writing db creator %s
-			}
+		if (!fl)
+			put(tdgbl, att_end);
 
-			if (!fl)
-				put(tdgbl, att_end);
-
-		END_FOR;
-		ON_ERROR
-			general_on_error();
-		END_ERROR;
-	}
+	END_FOR;
+	ON_ERROR
+		general_on_error();
+	END_ERROR;
 
 	MISC_release_request_silent(req_handle);
 }

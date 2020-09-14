@@ -340,7 +340,8 @@ static const UCHAR
 	decode[] = { op_line, op_verb, op_indent, op_byte, op_line, op_args, op_indent, op_byte,
 				 op_line, op_args, 0},
 	subproc_decl[] = { op_subproc_decl, 0},
-	subfunc_decl[] = { op_subfunc_decl, 0};
+	subfunc_decl[] = {op_subfunc_decl, 0},
+	marks[] = {op_byte, op_literal, op_line, op_verb, 0};
 
 
 #include "../jrd/blp.h"

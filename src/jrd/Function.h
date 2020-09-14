@@ -80,6 +80,9 @@ namespace Jrd
 
 		bool fun_deterministic;
 		const ExtEngineManager::Function* fun_external;
+
+	protected:
+		virtual bool reload(thread_db* tdbb);
 	};
 }
 

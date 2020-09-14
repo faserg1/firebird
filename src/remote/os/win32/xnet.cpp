@@ -70,8 +70,8 @@ static int send_partial(rem_port*, PACKET*);
 
 static int xdrxnet_create(XDR*, rem_port*, UCHAR*, USHORT, xdr_op);
 
-static bool_t xnet_getbytes(XDR*, SCHAR*, u_int);
-static bool_t xnet_putbytes(XDR*, const SCHAR*, u_int);
+static bool_t xnet_getbytes(XDR*, SCHAR*, unsigned);
+static bool_t xnet_putbytes(XDR*, const SCHAR*, unsigned);
 static bool_t xnet_read(XDR* xdrs);
 static bool_t xnet_write(XDR* xdrs);
 
@@ -1066,7 +1066,7 @@ static void cleanup_port(rem_port* port)
  *
  **************************************/
 
-	if (port->port_thread_guard && port->port_events_thread && !Thread::isCurrent(port->port_events_threadId))
+	if (port->port_thread_guard && port->port_events_thread && !port->port_events_threadId.isCurrent())
 	{
 		//port->port_thread_guard->setWait(port->port_events_thread);
 
@@ -1772,7 +1772,7 @@ static void xnet_error(rem_port* port, ISC_STATUS operation, int status)
 }
 
 
-static bool_t xnet_getbytes(XDR* xdrs, SCHAR* buff, u_int count)
+static bool_t xnet_getbytes(XDR* xdrs, SCHAR* buff, unsigned bytecount)
 {
 /**************************************
  *
@@ -1784,9 +1784,6 @@ static bool_t xnet_getbytes(XDR* xdrs, SCHAR* buff, u_int count)
  *	Fetch a bunch of bytes from remote interface.
  *
  **************************************/
-
-	SLONG bytecount = count;
-
 	rem_port* port = (rem_port*) xdrs->x_public;
 	const bool portServer = (port->port_flags & PORT_server);
 	XCC xcc = port->port_xcc;
@@ -1837,7 +1834,7 @@ static bool_t xnet_getbytes(XDR* xdrs, SCHAR* buff, u_int count)
 }
 
 
-static bool_t xnet_putbytes(XDR* xdrs, const SCHAR* buff, u_int count)
+static bool_t xnet_putbytes(XDR* xdrs, const SCHAR* buff, unsigned bytecount)
 {
 /**************************************
  *
@@ -1849,8 +1846,6 @@ static bool_t xnet_putbytes(XDR* xdrs, const SCHAR* buff, u_int count)
  *	Put a bunch of bytes into a memory stream.
  *
  **************************************/
-	SLONG bytecount = count;
-
 	rem_port* port = (rem_port*)xdrs->x_public;
 	const bool portServer = (port->port_flags & PORT_server);
 	XCC xcc = port->port_xcc;
@@ -1878,8 +1873,7 @@ static bool_t xnet_putbytes(XDR* xdrs, const SCHAR* buff, u_int count)
 
 		if (xdrs->x_handy)
 		{
-
-			if ((ULONG) xdrs->x_handy == xch->xch_size)
+			if (xdrs->x_handy == xch->xch_size)
 			{
 				while (!xnet_shutdown)
 				{

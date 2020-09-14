@@ -859,7 +859,7 @@ public:
 
 		AggNode* newInstance(MemoryPool& pool) const
 		{
-			return FB_NEW T(pool);
+			return FB_NEW_POOL(pool) T(pool);
 		}
 	};
 
@@ -875,7 +875,7 @@ public:
 
 		AggNode* newInstance(MemoryPool& pool) const
 		{
-			return FB_NEW T(pool, type);
+			return FB_NEW_POOL(pool) T(pool, type);
 		}
 
 	public:

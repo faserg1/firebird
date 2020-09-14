@@ -1045,6 +1045,7 @@ static void			init_database_lock(thread_db*);
 static void			run_commit_triggers(thread_db* tdbb, jrd_tra* transaction);
 static jrd_req*		verify_request_synchronization(JrdStatement* statement, USHORT level);
 static void			purge_transactions(thread_db*, Jrd::Attachment*, const bool);
+static void			check_single_maintenance(thread_db* tdbb);
 
 namespace {
 	enum VdnResult {VDN_FAIL, VDN_OK/*, VDN_SECURITY*/};
@@ -1055,7 +1056,7 @@ static void		unwindAttach(thread_db* tdbb, const Exception& ex, FbStatusVector* 
 	Jrd::Attachment* attachment, Database* dbb, bool internalFlag);
 static JAttachment*	initAttachment(thread_db*, const PathName&, const PathName&, RefPtr<const Config>, bool,
 	const DatabaseOptions&, RefMutexUnlock&, IPluginConfig*, JProvider*);
-static JAttachment*	create_attachment(const PathName&, Database*, const DatabaseOptions&, bool newDb);
+static JAttachment*	create_attachment(const PathName&, Database*, IProvider* provider, const DatabaseOptions&, bool newDb);
 static void		prepare_tra(thread_db*, jrd_tra*, USHORT, const UCHAR*);
 static void		start_transaction(thread_db* tdbb, bool transliterate, jrd_tra** tra_handle,
 	Jrd::Attachment* attachment, unsigned int tpb_length, const UCHAR* tpb);
@@ -1644,6 +1645,7 @@ JAttachment* JProvider::internalAttach(CheckStatusWrapper* user_status, const ch
 				fb_assert(dbb->dbb_lock_mgr);
 
 				LCK_init(tdbb, LCK_OWNER_attachment);
+				check_single_maintenance(tdbb);
 				jAtt->getStable()->manualAsyncUnlock(attachment->att_flags);
 
 				INI_init(tdbb);
@@ -2292,19 +2294,8 @@ ITransaction* JTransaction::join(CheckStatusWrapper* user_status, ITransaction* 
 
 JTransaction* JTransaction::validate(CheckStatusWrapper* user_status, IAttachment* testAtt)
 {
-	try
-	{
-		EngineContextHolder tdbb(user_status, this, FB_FUNCTION);
-		check_database(tdbb);
-
-		// Do not raise error in status - just return NULL if attachment does not match
-		return sAtt->getInterface() == testAtt ? this : NULL;
-	}
-	catch (const Exception& ex)
-	{
-		ex.stuffException(user_status);
-	}
-	return NULL;
+	// Do not raise error in status - just return NULL if attachment does not match
+	return (sAtt && sAtt->getInterface() == testAtt) ? this : NULL;
 }
 
 JTransaction* JTransaction::enterDtc(CheckStatusWrapper* user_status)
@@ -5020,6 +5011,14 @@ JStatement* JAttachment::prepare(CheckStatusWrapper* user_status, ITransaction* 
 		try
 		{
 			Array<UCHAR> items, buffer;
+
+			// ASF: The original code (first commit) was:
+			// buffer.resize(StatementMetadata::buildInfoItems(items, flags));
+			// which makes DSQL_prepare internals to fill the statement metadata.
+			// The code as now makes DSQL_prepare to not do this job.
+			// For embedded connection I believe the pre-filling is better but for
+			// remote I'm not sure it's unnecessary job, so I'm only putting that
+			// observation for now.
 			StatementMetadata::buildInfoItems(items, flags);
 
 			statement = DSQL_prepare(tdbb, getHandle(), tra, stmtLength, sqlStmt, dialect,
@@ -6123,7 +6122,7 @@ static JAttachment* initAttachment(thread_db* tdbb, const PathName& expanded_nam
 								fb_assert(!(dbb->dbb_flags & DBB_new));
 
 								tdbb->setDatabase(dbb);
-								jAtt = create_attachment(alias_name, dbb, options, !attach_flag);
+								jAtt = create_attachment(alias_name, dbb, provider, options, !attach_flag);
 
 								if (dbb->dbb_linger_timer)
 									dbb->dbb_linger_timer->reset();
@@ -6181,7 +6180,7 @@ static JAttachment* initAttachment(thread_db* tdbb, const PathName& expanded_nam
 		dbbGuard.lock(SYNC_EXCLUSIVE);
 
 		tdbb->setDatabase(dbb);
-		jAtt = create_attachment(alias_name, dbb, options, !attach_flag);
+		jAtt = create_attachment(alias_name, dbb, provider, options, !attach_flag);
 		tdbb->setAttachment(jAtt->getHandle());
 	} // end scope
 
@@ -6218,6 +6217,7 @@ static JAttachment* initAttachment(thread_db* tdbb, const PathName& expanded_nam
 
 static JAttachment* create_attachment(const PathName& alias_name,
 									  Database* dbb,
+									  IProvider* provider,
 									  const DatabaseOptions& options,
 									  bool newDb)
 {
@@ -6242,7 +6242,7 @@ static JAttachment* create_attachment(const PathName& alias_name,
 			status_exception::raise(Arg::Gds(isc_att_shutdown));
 		}
 
-		attachment = Jrd::Attachment::create(dbb);
+		attachment = Jrd::Attachment::create(dbb, provider);
 		attachment->att_next = dbb->dbb_attachments;
 		dbb->dbb_attachments = attachment;
 	}
@@ -6285,6 +6285,21 @@ static JAttachment* create_attachment(const PathName& alias_name,
 }
 
 
+static void check_single_maintenance(thread_db* tdbb)
+{
+	UCHAR spare_memory[RAW_HEADER_SIZE + PAGE_ALIGNMENT];
+	UCHAR* header_page_buffer = FB_ALIGN(spare_memory, PAGE_ALIGNMENT);
+	Ods::header_page* const header_page = reinterpret_cast<Ods::header_page*>(header_page_buffer);
+
+	PIO_header(tdbb, header_page_buffer, RAW_HEADER_SIZE);
+
+	if ((header_page->hdr_flags & Ods::hdr_shutdown_mask) == Ods::hdr_shutdown_single)
+	{
+		ERR_post(Arg::Gds(isc_shutdown) << Arg::Str(tdbb->getAttachment()->att_filename));
+	}
+}
+
+
 static void init_database_lock(thread_db* tdbb)
 {
 /**************************************
@@ -6323,16 +6338,7 @@ static void init_database_lock(thread_db* tdbb)
 			fb_utils::init_status(tdbb->tdbb_status_vector);
 
 			// If we are in a single-threaded maintenance mode then clean up and stop waiting
-			UCHAR spare_memory[RAW_HEADER_SIZE + PAGE_ALIGNMENT];
-			UCHAR* header_page_buffer = FB_ALIGN(spare_memory, PAGE_ALIGNMENT);
-			Ods::header_page* const header_page = reinterpret_cast<Ods::header_page*>(header_page_buffer);
-
-			PIO_header(tdbb, header_page_buffer, RAW_HEADER_SIZE);
-
-			if ((header_page->hdr_flags & Ods::hdr_shutdown_mask) == Ods::hdr_shutdown_single)
-			{
-				ERR_post(Arg::Gds(isc_shutdown) << Arg::Str(attachment->att_filename));
-			}
+			check_single_maintenance(tdbb);
 		}
 	}
 }
@@ -6456,6 +6462,7 @@ static void release_attachment(thread_db* tdbb, Jrd::Attachment* attachment)
 
 	// stop the crypt thread if we release last regular attachment
 	Jrd::Attachment* crypt_att = NULL;
+	bool other = false;
 	CRYPT_DEBUG(fprintf(stderr, "\nrelease attachment=%p\n", attachment));
 	for (Jrd::Attachment* att = dbb->dbb_attachments; att; att = att->att_next)
 	{
@@ -6472,9 +6479,14 @@ static void release_attachment(thread_db* tdbb, Jrd::Attachment* attachment)
 			continue;
 		}
 		crypt_att = NULL;
+		other = true;
 		CRYPT_DEBUG(fprintf(stderr, "other\n"));
 		break;
 	}
+
+	if (dbb->dbb_crypto_manager && !(other || crypt_att))
+		dbb->dbb_crypto_manager->terminateCryptThread(tdbb, false);
+
 	cryptGuard.leave();
 
 	if (crypt_att)
@@ -6482,6 +6494,7 @@ static void release_attachment(thread_db* tdbb, Jrd::Attachment* attachment)
 		sync.unlock();
 
 		CRYPT_DEBUG(fprintf(stderr, "crypt_att=%p terminateCryptThread\n", crypt_att));
+		fb_assert(dbb->dbb_crypto_manager);
 		dbb->dbb_crypto_manager->terminateCryptThread(tdbb, true);
 
 		sync.lock(SYNC_EXCLUSIVE);
@@ -6662,11 +6675,21 @@ bool JRD_shutdown_database(Database* dbb, const unsigned flags)
 
 	fb_assert(!dbb->locked());
 
+	try
+	{
 #ifdef SUPERSERVER_V2
-	TRA_header_write(tdbb, dbb, 0);	// Update transaction info on header page.
+		TRA_header_write(tdbb, dbb, 0);	// Update transaction info on header page.
 #endif
-	if (flags & SHUT_DBB_RELEASE_POOLS)
-		TRA_update_counters(tdbb, dbb);
+		if (flags & SHUT_DBB_RELEASE_POOLS)
+			TRA_update_counters(tdbb, dbb);
+	}
+	catch (const Exception&)
+	{
+		// Swallow exception raised from the physical I/O layer
+		// (e.g. due to database file being inaccessible).
+		// User attachment is already destroyed, so there's no chance
+		// this dbb can be cleaned up after raising an exception.
+	}
 
 	// Disable AST delivery as we're about to release all locks
 
@@ -6678,9 +6701,6 @@ bool JRD_shutdown_database(Database* dbb, const unsigned flags)
 	// Shutdown file and/or remote connection
 
 	VIO_fini(tdbb);
-
-	if (dbb->dbb_crypto_manager)
-		dbb->dbb_crypto_manager->terminateCryptThread(tdbb);
 
 	CCH_shutdown(tdbb);
 
@@ -7646,7 +7666,7 @@ bool thread_db::checkCancelState(bool punt)
 	return true;
 }
 
-bool thread_db::reschedule(SLONG quantum, bool punt)
+bool thread_db::reschedule(bool punt)
 {
 	// Somebody has kindly offered to relinquish
 	// control so that somebody else may run
@@ -7664,8 +7684,8 @@ bool thread_db::reschedule(SLONG quantum, bool punt)
 
 	Monitoring::checkState(this);
 
-	tdbb_quantum = (tdbb_quantum <= 0) ?
-		(quantum ? quantum : QUANTUM) : tdbb_quantum;
+	if (tdbb_quantum <= 0)
+		tdbb_quantum = (tdbb_flags & TDBB_sweeper) ? SWEEP_QUANTUM : QUANTUM;
 
 	return false;
 }

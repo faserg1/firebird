@@ -349,6 +349,8 @@ void ClumpletWriter::insertBytesLengthCheck(UCHAR tag, const void* bytes, const 
 				m.printf("attempt to store %d bytes in a clumplet, need 1", length);
 			}
 			break;
+		default:
+			invalid_structure("unknown clumplet type");
 		}
 
 		if (m.isEmpty())

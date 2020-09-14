@@ -412,4 +412,8 @@
 #define blr_local_timestamp         (unsigned char) 214
 #define blr_local_time              (unsigned char) 215
 
+// forward support of some FB4 BLR codes
+
+#define blr_marks					(unsigned char) 217		// mark some blr code with specific flags
+
 #endif // JRD_BLR_H

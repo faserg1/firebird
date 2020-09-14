@@ -37,7 +37,64 @@
 #endif
 
 struct dsc;
-struct PerformanceInfo;
+
+namespace Firebird
+{
+
+// Performance counters for individual table
+typedef int ntrace_relation_t;
+struct TraceCounts
+{
+	// Per-table performance counters, must correspond to RuntimeStatistics::StatType
+	// starting from RECORD_SEQ_READS. 
+	// Used with trc_counters.
+	enum RecordCounters
+	{
+		SEQ_READS = 0,
+		IDX_READS,
+		UPDATES,
+		INSERTS,
+		DELETES,
+		BACKOUTS,
+		PURGES,
+		EXPUNGES,
+		LOCKS,
+		WAITS,
+		CONFLICTS,
+		BACKVERSION_READS,
+		FRAGMENT_READS,
+		RPT_READS
+	};
+
+	ntrace_relation_t	trc_relation_id;	// Relation ID
+	const char*			trc_relation_name;	// Relation name
+	const ISC_INT64*	trc_counters;	    // Pointer to allow easy addition of new counters
+};
+
+// Performance statistics for operation
+struct PerformanceInfo
+{
+	// IO performance counters, must correspond to RuntimeStatistics::StatType
+	// between PAGE_FETCHES and (not including) RECORD_SEQ_READS. 
+	// Used with pin_counters.
+	enum PageCounters
+	{
+		FETCHES = 0,
+		READS,
+		MARKS,
+		WRITES
+	};
+
+	ISC_INT64 pin_time;				// Total operation time in milliseconds
+	ISC_INT64* pin_counters;		// Pointer to allow easy addition of new counters
+
+	size_t pin_count;				// Number of relations involved in analysis
+	struct TraceCounts* pin_tables; // Pointer to array with table stats
+
+	ISC_INT64 pin_records_fetched;	// records fetched from statement/procedure
+};
+
+}; // namespace Firebird
 
 #include "IdlFbInterfaces.h"
 

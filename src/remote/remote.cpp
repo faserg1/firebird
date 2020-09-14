@@ -711,7 +711,7 @@ void rem_port::auxAcceptError(PACKET* packet)
 	}
 }
 
-bool_t REMOTE_getbytes (XDR* xdrs, SCHAR* buff, u_int count)
+bool_t REMOTE_getbytes (XDR* xdrs, SCHAR* buff, unsigned bytecount)
 {
 /**************************************
  *
@@ -723,9 +723,6 @@ bool_t REMOTE_getbytes (XDR* xdrs, SCHAR* buff, u_int count)
  *	Get a bunch of bytes from a port buffer
  *
  **************************************/
-	SLONG bytecount = count;
-
-	// Use memcpy to optimize bulk transfers.
 
 	while (bytecount > 0)
 	{
@@ -745,6 +742,7 @@ bool_t REMOTE_getbytes (XDR* xdrs, SCHAR* buff, u_int count)
 			bytecount -= xdrs->x_handy;
 			xdrs->x_handy = 0;
 		}
+
 		rem_port* port = (rem_port*) xdrs->x_public;
 		Firebird::RefMutexGuard queGuard(*port->port_que_sync, FB_FUNCTION);
 		if (port->port_qoffset >= port->port_queue.getCount())
@@ -753,7 +751,7 @@ bool_t REMOTE_getbytes (XDR* xdrs, SCHAR* buff, u_int count)
 			return FALSE;
 		}
 
-		xdrs->x_handy = (int) port->port_queue[port->port_qoffset].getCount();
+		xdrs->x_handy = port->port_queue[port->port_qoffset].getCount();
 		fb_assert(xdrs->x_handy <= port->port_buff_size);
 		memcpy(xdrs->x_base, port->port_queue[port->port_qoffset].begin(), xdrs->x_handy);
 		++port->port_qoffset;
@@ -1420,6 +1418,22 @@ rem_port::~rem_port()
 #endif
 }
 
+bool rem_port::releasePort()
+{
+	Firebird::RefMutexEnsureUnlock portGuard(*port_sync, FB_FUNCTION);
+	const bool locked = portGuard.tryEnter();
+	fb_assert(locked);
+	(void) locked; // avoid warnings in release build
+
+	fb_assert(!(port_flags & PORT_released));
+	if (port_flags & PORT_released)
+		return false;
+
+	port_flags |= PORT_released;
+	release();
+	return true;
+}
+
 bool REMOTE_inflate(rem_port* port, PacketReceive* packet_receive, UCHAR* buffer,
 	SSHORT buffer_length, SSHORT* length)
 {
@@ -1492,6 +1506,10 @@ bool REMOTE_inflate(rem_port* port, PacketReceive* packet_receive, UCHAR* buffer
 		port->port_flags |= PORT_z_data;
 	else
 		port->port_flags &= ~PORT_z_data;
+
+#ifdef COMPRESS_DEBUG
+	fprintf(stderr, "Z-buffer %s\n", port->port_flags & PORT_z_data ? "has data" : "is empty");
+#endif
 
 	return true;
 #else

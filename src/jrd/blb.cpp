@@ -625,7 +625,7 @@ USHORT blb::BLB_get_segment(thread_db* tdbb, void* segment, USHORT buffer_length
 	Database* dbb = tdbb->getDatabase();
 
 	if (--tdbb->tdbb_quantum < 0)
-		JRD_reschedule(tdbb, 0, true);
+		JRD_reschedule(tdbb, true);
 
 	// If we reached end of file, we're still there
 

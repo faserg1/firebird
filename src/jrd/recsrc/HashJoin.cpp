@@ -332,7 +332,7 @@ void HashJoin::close(thread_db* tdbb) const
 bool HashJoin::getRecord(thread_db* tdbb) const
 {
 	if (--tdbb->tdbb_quantum < 0)
-		JRD_reschedule(tdbb, 0, true);
+		JRD_reschedule(tdbb, true);
 
 	jrd_req* const request = tdbb->getRequest();
 	Impure* const impure = request->getImpure<Impure>(m_impure);

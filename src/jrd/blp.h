@@ -246,5 +246,7 @@ static const struct
 	{0, 0},
 	{"local_timestamp", byte_line},
 	{"local_time", byte_line},
+	{0, 0},
+	{"marks", marks},
 	{0, 0}
 };

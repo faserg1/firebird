@@ -5212,6 +5212,7 @@ static processing_state get_statement(Firebird::string& statement,
 
 	char lastChar = '\0';
 	char altQuoteChar = '\0';
+	unsigned altQuoteStringLength = 0;
 
 	while (!done)
 	{
@@ -5350,6 +5351,7 @@ static processing_state get_statement(Firebird::string& statement,
 					{
 						statement += (lastChar = c);
 						altQuoteChar = c = getNextInputChar();
+						altQuoteStringLength = statement.length();
 
 						switch (altQuoteChar)
 						{
@@ -5373,7 +5375,7 @@ static processing_state get_statement(Firebird::string& statement,
 					state = in_single_quoted_string;
 					break;
 				case in_single_quoted_string:
-					if (!altQuoteChar || lastChar == altQuoteChar)
+					if (!altQuoteChar || (statement.length() != altQuoteStringLength + 1 && lastChar == altQuoteChar))
 						state = normal;
 					break;
 			}
@@ -6133,7 +6135,7 @@ static processing_state newdb(TEXT* dbname,
 		local_numbufs = global_numbufs;
 
 	// Build up a dpb
-	Firebird::ClumpletWriter dpb(Firebird::ClumpletReader::Tagged, MAX_DPB_SIZE, isc_dpb_version1);
+	Firebird::ClumpletWriter dpb(Firebird::ClumpletReader::dpbList, MAX_DPB_SIZE);
 
 	if (*setValues.ISQL_charset && strcmp(setValues.ISQL_charset, DEFCHARSET)) {
 		dpb.insertString(isc_dpb_lc_ctype, setValues.ISQL_charset, fb_strlen(setValues.ISQL_charset));
@@ -8479,6 +8481,9 @@ static processing_state process_statement(const TEXT* str2)
 				ret = ps_ERR;
 				break;
 			}
+
+			// check for warnings
+			ISQL_warning(fbStatus);
 
 			ret = print_line(message, buffer, pad, line);
 		}

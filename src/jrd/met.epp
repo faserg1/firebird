@@ -3472,12 +3472,10 @@ jrd_prc* MET_procedure(thread_db* tdbb, USHORT id, bool noscan, USHORT flags)
 					}
 					else
 					{
-						if (!P.RDB$DEBUG_INFO.NULL)
-							DBG_parse_debug_info(tdbb, &P.RDB$DEBUG_INFO, *csb->csb_dbg_info);
-
 						try
 						{
-							procedure->parseBlr(tdbb, csb, &P.RDB$PROCEDURE_BLR);
+							procedure->parseBlr(tdbb, csb, &P.RDB$PROCEDURE_BLR, 
+								P.RDB$DEBUG_INFO.NULL ? NULL : &P.RDB$DEBUG_INFO);
 						}
 						catch (const Exception& ex)
 						{
@@ -3563,6 +3561,45 @@ jrd_prc* MET_procedure(thread_db* tdbb, USHORT id, bool noscan, USHORT flags)
 	return procedure;
 }
 
+bool jrd_prc::reload(thread_db* tdbb)
+{
+	fb_assert(this->flags & Routine::FLAG_RELOAD);
+
+	Attachment* attachment = tdbb->getAttachment();
+	AutoCacheRequest request(tdbb, irq_r_proc_blr, IRQ_REQUESTS);
+
+	FOR(REQUEST_HANDLE request)
+		P IN RDB$PROCEDURES WITH P.RDB$PROCEDURE_ID EQ this->getId()
+	{
+		MemoryPool* const csb_pool = attachment->createPool();
+		Jrd::ContextPoolHolder context(tdbb, csb_pool);
+
+		AutoPtr<CompilerScratch> csb(CompilerScratch::newCsb(*csb_pool, 5));
+
+		try
+		{
+			this->parseBlr(tdbb, csb, &P.RDB$PROCEDURE_BLR,
+				P.RDB$DEBUG_INFO.NULL ? NULL : &P.RDB$DEBUG_INFO);
+
+			// parseBlr() above could set FLAG_RELOAD again
+			return !(this->flags & Routine::FLAG_RELOAD);
+		}
+		catch (const Exception& ex)
+		{
+			StaticStatusVector temp_status;
+			ex.stuffException(temp_status);
+
+			attachment->deletePool(csb_pool);
+
+			const string name = this->getName().toString();
+			(Arg::Gds(isc_bad_proc_BLR) << Arg::Str(name)
+				<< Arg::StatusVector(temp_status.begin())).raise();
+		}
+	}
+	END_FOR
+
+	return false;
+}
 
 jrd_rel* MET_relation(thread_db* tdbb, USHORT id)
 {

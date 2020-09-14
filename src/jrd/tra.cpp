@@ -1794,7 +1794,7 @@ void TRA_sweep(thread_db* tdbb)
 		// 2) Execution is throttled in JRD_reschedule() by
 		// yielding the processor when our quantum expires.
 
-		tdbb->tdbb_flags |= TDBB_sweeper;
+		ThreadSweepGuard sweepGuard(tdbb);
 
 		TraceSweepEvent traceSweep(tdbb);
 
@@ -1860,7 +1860,6 @@ void TRA_sweep(thread_db* tdbb)
 
 		TRA_commit(tdbb, transaction, false);
 
-		tdbb->tdbb_flags &= ~TDBB_sweeper;
 		tdbb->setTransaction(tdbb_old_trans);
 		dbb->clearSweepFlags(tdbb);
 	}
@@ -1885,7 +1884,6 @@ void TRA_sweep(thread_db* tdbb)
 			}
 		}
 
-		tdbb->tdbb_flags &= ~TDBB_sweeper;
 		tdbb->setTransaction(tdbb_old_trans);
 		dbb->clearSweepFlags(tdbb);
 
@@ -2719,7 +2717,7 @@ static THREAD_ENTRY_DECLARE sweep_database(THREAD_ENTRY_PARAM database)
  *	Sweep database.
  *
  **************************************/
-	Firebird::ClumpletWriter dpb(Firebird::ClumpletReader::Tagged, MAX_DPB_SIZE, isc_dpb_version1);
+	Firebird::ClumpletWriter dpb(Firebird::ClumpletReader::dpbList, MAX_DPB_SIZE);
 
 	dpb.insertByte(isc_dpb_sweep, isc_dpb_records);
 	// use embedded authentication to attach database

@@ -70,6 +70,7 @@ void MetadataBuilder::setType(CheckStatusWrapper* status, unsigned index, unsign
 			if (dtype < DTYPE_TYPE_MAX)
 				msgMetadata->items[index].length = type_lengths[dtype];
 		}
+		msgMetadata->items[index].nullable = type & 1;
 
 		// Setting type & length is enough for an item to be ready for use
 		if (msgMetadata->items[index].length)

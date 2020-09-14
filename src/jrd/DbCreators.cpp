@@ -71,7 +71,7 @@ bool openDb(const char* securityDb, RefPtr<IAttachment>& att, RefPtr<ITransactio
 {
 	DispatcherPtr prov;
 
-	ClumpletWriter embeddedSysdba(ClumpletWriter::Tagged, MAX_DPB_SIZE, isc_dpb_version1);
+	ClumpletWriter embeddedSysdba(ClumpletWriter::dpbList, MAX_DPB_SIZE);
 	embeddedSysdba.insertString(isc_dpb_user_name, SYSDBA_USER_NAME, fb_strlen(SYSDBA_USER_NAME));
 	embeddedSysdba.insertByte(isc_dpb_sec_attach, TRUE);
 	embeddedSysdba.insertString(isc_dpb_config, Auth::ParsedList::getNonLoopbackProviders(securityDb));

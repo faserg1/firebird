@@ -444,6 +444,16 @@ dsql_par* MAKE_parameter(dsql_msg* message, bool sqlda_flag, bool null_flag,
 
 	thread_db* tdbb = JRD_get_thread_data();
 
+	if (message->msg_parameter == MAX_USHORT)
+	{
+		string msg;
+		msg.printf("Maximum number of parameters: %d", MAX_USHORT / 2);
+
+		ERRD_post(Arg::Gds(isc_imp_exc) <<
+			Arg::Gds(isc_random) <<
+			msg);
+	}
+
 	dsql_par* parameter = FB_NEW_POOL(*tdbb->getDefaultPool()) dsql_par(*tdbb->getDefaultPool());
 	parameter->par_message = message;
 	message->msg_parameters.insert(0, parameter);

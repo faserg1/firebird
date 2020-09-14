@@ -188,7 +188,7 @@ const Config::ConfigEntry Config::entries[MAX_CONFIG_KEY] =
 #endif
 	{TYPE_STRING,		"UserManager",				(ConfigValue) "Srp"},
 	{TYPE_STRING,		"TracePlugin",				(ConfigValue) "fbtrace"},
-	{TYPE_STRING,		"SecurityDatabase",			(ConfigValue) "security.db"},	// sec/db alias - rely on databases.conf
+	{TYPE_STRING,		"SecurityDatabase",			(ConfigValue) NULL},	// sec/db alias - rely on ConfigManager::getDefaultSecurityDb()
 	{TYPE_STRING,		"ServerMode",				(ConfigValue) ""},		// actual value differs in boot/regular cases
 	{TYPE_STRING,		"WireCrypt",				(ConfigValue) NULL},
 	{TYPE_STRING,		"WireCryptPlugin",			(ConfigValue) "Arc4"},
@@ -407,6 +407,14 @@ const char* Config::getString(unsigned int key) const
 {
 	if (key >= MAX_CONFIG_KEY)
 		return NULL;
+
+	// irregular case
+	switch(key)
+	{
+	case KEY_SECURITY_DATABASE:
+		return getSecurityDatabase();
+	}
+
 	return get<const char*>(static_cast<ConfigKey>(key));
 }
 
@@ -768,7 +776,15 @@ int FirebirdConf::release()
 
 const char* Config::getSecurityDatabase() const
 {
-	return get<const char*>(KEY_SECURITY_DATABASE);
+	const char* strVal = get<const char*>(KEY_SECURITY_DATABASE);
+	if (!strVal)
+	{
+		strVal = Firebird::MasterInterfacePtr()->getConfigManager()->getDefaultSecurityDb();
+		if (!strVal)
+			strVal = "security.db";
+	}
+
+	return strVal;
 }
 
 int Config::getWireCrypt(WireCryptMode wcMode) const

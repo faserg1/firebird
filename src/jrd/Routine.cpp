@@ -107,10 +107,29 @@ Format* Routine::createFormat(MemoryPool& pool, IMessageMetadata* params, bool a
 	return format;
 }
 
-// Parse routine BLR.
-void Routine::parseBlr(thread_db* tdbb, CompilerScratch* csb, bid* blob_id)
+void Routine::checkReload(thread_db* tdbb)
+{
+	if (!(flags & FLAG_RELOAD))
+		return;
+
+	if (!reload(tdbb))
+	{
+		string err;
+		err.printf("Recompile of %s \"%s\" failed", 
+					getObjectType() == obj_udf ? "FUNCTION" : "PROCEDURE",
+					getName().toString().c_str());
+
+		(Arg::Gds(isc_random) << Arg::Str(err)).raise();
+	}
+}
+
+// Parse routine BLR and debug info.
+void Routine::parseBlr(thread_db* tdbb, CompilerScratch* csb, bid* blob_id, bid* blobDbg)
 {
 	Jrd::Attachment* attachment = tdbb->getAttachment();
+
+	if (blobDbg)
+		DBG_parse_debug_info(tdbb, blobDbg, *csb->csb_dbg_info);
 
 	UCharBuffer tmp;
 
@@ -125,9 +144,14 @@ void Routine::parseBlr(thread_db* tdbb, CompilerScratch* csb, bid* blob_id)
 
 	parseMessages(tdbb, csb, BlrReader(tmp.begin(), (unsigned) tmp.getCount()));
 
+	flags &= ~Routine::FLAG_RELOAD;
+
 	JrdStatement* statement = getStatement();
 	PAR_blr(tdbb, NULL, tmp.begin(), (ULONG) tmp.getCount(), NULL, &csb, &statement, false, 0);
 	setStatement(statement);
+
+	if (csb->csb_g_flags & csb_reload)
+		flags |= FLAG_RELOAD;
 
 	if (!blob_id)
 		setImplemented(false);

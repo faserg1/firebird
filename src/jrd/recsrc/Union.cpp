@@ -100,7 +100,7 @@ void Union::close(thread_db* tdbb) const
 bool Union::getRecord(thread_db* tdbb) const
 {
 	if (--tdbb->tdbb_quantum < 0)
-		JRD_reschedule(tdbb, 0, true);
+		JRD_reschedule(tdbb, true);
 
 	jrd_req* const request = tdbb->getRequest();
 	record_param* const rpb = &request->req_rpb[m_stream];

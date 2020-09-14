@@ -837,7 +837,12 @@ UCHAR* INF_put_item(UCHAR item,
 
 	if (ptr + length + (inserting ? 3 : 4) >= end)
 	{
-		*ptr = isc_info_truncated;
+		if (ptr < end)
+		{
+			*ptr++ = isc_info_truncated;
+			if (ptr < end && !inserting)
+				*ptr++ = isc_info_end;
+		}
 		return NULL;
 	}
 

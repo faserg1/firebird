@@ -604,7 +604,7 @@ ExtEngineManager::ExternalContextImpl::ExternalContextImpl(thread_db* tdbb,
 	internalAttachment->getStable()->addRef();
 
 	externalAttachment = MasterInterfacePtr()->registerAttachment
-		(AutoPlugin<JProvider>(JProvider::getInstance()), internalAttachment->getInterface());
+		(internalAttachment->getProvider(), internalAttachment->getInterface());
 }
 
 ExtEngineManager::ExternalContextImpl::~ExternalContextImpl()
@@ -952,6 +952,8 @@ void ExtEngineManager::Trigger::execute(thread_db* tdbb, jrd_req* request, unsig
 
 void ExtEngineManager::Trigger::setupComputedFields(thread_db* tdbb, MemoryPool& pool, CompilerScratch* csb)
 {
+	SET_TDBB(tdbb);
+
 	USHORT varId = 0;
 
 	fb_assert(NEW_CONTEXT_VALUE == OLD_CONTEXT_VALUE + 1);
@@ -984,18 +986,7 @@ void ExtEngineManager::Trigger::setupComputedFields(thread_db* tdbb, MemoryPool&
 			csb->csb_variables = vec<DeclareVariableNode*>::newVector(
 				*tdbb->getDefaultPool(), csb->csb_variables, varId);
 
-			ValueExprNode* exprNode = field->fld_computation;
-
-			if (context == NEW_CONTEXT_VALUE)
-			{
-				StreamType map[1];
-				map[OLD_CONTEXT_VALUE] = NEW_CONTEXT_VALUE;	// map context 0 (OLD) to 1 (NEW)
-
-				AutoSetRestore<USHORT> autoRemapVariable(&csb->csb_remap_variable,
-					(csb->csb_variables ? csb->csb_variables->count() : 0) + 1);
-
-				exprNode = NodeCopier::copy(tdbb, csb, exprNode, map);
-			}
+			ValueExprNode* exprNode = FB_NEW_POOL(*tdbb->getDefaultPool()) FieldNode(*tdbb->getDefaultPool(), context, i, true);
 
 			VariableNode* varNode = FB_NEW_POOL(pool) VariableNode(pool);
 			varNode->varId = varId;

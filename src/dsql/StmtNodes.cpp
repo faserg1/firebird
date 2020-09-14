@@ -19,6 +19,7 @@
  */
 
 #include "firebird.h"
+#include "ids.h"
 #include "../common/classes/BaseStream.h"
 #include "../common/classes/MsgPrint.h"
 #include "../common/classes/VaryStr.h"
@@ -27,6 +28,7 @@
 #include "../dsql/StmtNodes.h"
 #include "../jrd/align.h"
 #include "../jrd/blr.h"
+#include "../jrd/ini.h"
 #include "../jrd/tra.h"
 #include "../jrd/Function.h"
 #include "../jrd/Optimizer.h"
@@ -2041,6 +2043,9 @@ DmlNode* EraseNode::parse(thread_db* /*tdbb*/, MemoryPool& pool, CompilerScratch
 	EraseNode* node = FB_NEW_POOL(pool) EraseNode(pool);
 	node->stream = csb->csb_rpt[n].csb_stream;
 
+	if (csb->csb_blr_reader.peekByte() == blr_marks)
+		PAR_marks(csb); // unused
+
 	return node;
 }
 
@@ -2292,6 +2297,27 @@ EraseNode* EraseNode::pass2(thread_db* tdbb, CompilerScratch* csb)
 {
 	doPass2(tdbb, csb, statement.getAddress(), this);
 	doPass2(tdbb, csb, subStatement.getAddress(), this);
+
+	const jrd_rel* const relation = csb->csb_rpt[stream].csb_relation;
+
+	if (relation)
+	{
+		// Deletion from MON$ tables uses the attachment ID and the system flag
+		// under the hood, so these field should be added as implicitly referenced
+
+		if (relation->rel_id == rel_mon_attachments)
+		{
+			SBM_SET(tdbb->getDefaultPool(), &csb->csb_rpt[stream].csb_fields,
+					f_mon_att_id); // MON$ATTACHMENT_ID
+			SBM_SET(tdbb->getDefaultPool(), &csb->csb_rpt[stream].csb_fields,
+					f_mon_att_sys_flag); // MON$SYSTEM_FLAG
+		}
+		else if (relation->rel_id == rel_mon_statements)
+		{
+			SBM_SET(tdbb->getDefaultPool(), &csb->csb_rpt[stream].csb_fields,
+					f_mon_stmt_att_id); // MON$ATTACHMENT_ID
+		}
+	}
 
 	impureOffset = CMP_impure(csb, sizeof(SLONG));
 	csb->csb_rpt[stream].csb_flags |= csb_update;
@@ -2910,6 +2936,8 @@ void ExecProcedureNode::executeProcedure(thread_db* tdbb, jrd_req* request) cons
 			Arg::Gds(isc_proc_pack_not_implemented) <<
 				Arg::Str(procedure->getName().identifier) << Arg::Str(procedure->getName().package));
 	}
+
+	const_cast<jrd_prc*>(procedure.getObject())->checkReload(tdbb);
 
 	Jrd::Attachment* attachment = tdbb->getAttachment();
 
@@ -3670,7 +3698,7 @@ const StmtNode* InAutonomousTransactionNode::execute(thread_db* tdbb, jrd_req* r
 	{
 		// Force unconditional reschedule. It prevents new transactions being
 		// started after an attachment or a database shutdown has been initiated.
-		JRD_reschedule(tdbb, 0, true);
+		JRD_reschedule(tdbb, true);
 
 		jrd_tra* const org_transaction = request->req_transaction;
 		fb_assert(tdbb->getTransaction() == org_transaction);
@@ -4510,6 +4538,9 @@ DmlNode* ForNode::parse(thread_db* tdbb, MemoryPool& pool, CompilerScratch* csb,
 {
 	ForNode* node = FB_NEW_POOL(pool) ForNode(pool);
 
+	if (csb->csb_blr_reader.peekByte() == blr_marks)
+		PAR_marks(csb); // unused
+
 	if (csb->csb_blr_reader.peekByte() == (UCHAR) blr_stall)
 		node->stall = PAR_parse_stmt(tdbb, csb);
 
@@ -4689,7 +4720,7 @@ StmtNode* ForNode::pass2(thread_db* tdbb, CompilerScratch* csb)
 	return this;
 }
 
-const StmtNode* ForNode::execute(thread_db* tdbb, jrd_req* request, ExeState* /*exeState*/) const
+const StmtNode* ForNode::execute(thread_db* tdbb, jrd_req* request, ExeState* exeState) const
 {
 	jrd_tra* transaction = request->req_transaction;
 	jrd_tra* sysTransaction = request->req_attachment->getSysTransaction();
@@ -4747,6 +4778,10 @@ const StmtNode* ForNode::execute(thread_db* tdbb, jrd_req* request, ExeState* /*
 				while (transaction->tra_save_point &&
 					transaction->tra_save_point->sav_number >= savNumber)
 				{
+					// If an error is still pending when the savepoint is supposed to end, then the
+					// application didn't handle the error and the savepoint should be undone.
+					if (exeState->errorPending)
+						++transaction->tra_save_point->sav_verb_count;
 					VIO_verb_cleanup(tdbb, transaction);
 				}
 			}
@@ -5166,9 +5201,9 @@ StmtNode* MergeNode::dsqlPass(DsqlCompilerScratch* dsqlScratch)
 	StmtNode* update = NULL;
 	IfNode* lastIf = NULL;
 
-	for (ObjectsArray<Matched>::iterator matched = whenMatched.begin();
+	for (ObjectsArray<Matched>::iterator nextMatched = whenMatched.begin(), matched = nextMatched++;
 		 matched != whenMatched.end();
-		 ++matched)
+		 matched = nextMatched++)
 	{
 		IfNode* thisIf = FB_NEW_POOL(pool) IfNode(pool);
 
@@ -5308,24 +5343,30 @@ StmtNode* MergeNode::dsqlPass(DsqlCompilerScratch* dsqlScratch)
 			--dsqlScratch->scopeLevel;
 		}
 
+		if (!thisIf->condition && nextMatched != whenMatched.end())
+		{
+			ComparativeBoolNode* cmpNode = FB_NEW_POOL(pool) ComparativeBoolNode(pool,
+				blr_eql, MAKE_constant("1", CONSTANT_BOOLEAN), MAKE_constant("1", CONSTANT_BOOLEAN));
+			cmpNode->dsqlCheckBoolean = true;
+
+			NestConst<BoolExprNode> trueCondition(cmpNode);
+			thisIf->condition = doDsqlPass(dsqlScratch, trueCondition, false);
+		}
+
 		if (lastIf)
 			lastIf->falseAction = thisIf->condition ? thisIf : thisIf->trueAction;
 		else
 			update = thisIf->condition ? thisIf : thisIf->trueAction;
 
 		lastIf = thisIf;
-
-		// If a statement executes unconditionally, no other will ever execute.
-		if (!thisIf->condition)
-			break;
 	}
 
 	StmtNode* insert = NULL;
 	lastIf = NULL;
 
-	for (ObjectsArray<NotMatched>::iterator notMatched = whenNotMatched.begin();
+	for (ObjectsArray<NotMatched>::iterator nextNotMatched = whenNotMatched.begin(), notMatched = nextNotMatched++;
 		 notMatched != whenNotMatched.end();
-		 ++notMatched)
+		 notMatched = nextNotMatched++)
 	{
 		IfNode* thisIf = FB_NEW_POOL(pool) IfNode(pool);
 
@@ -5376,16 +5417,22 @@ StmtNode* MergeNode::dsqlPass(DsqlCompilerScratch* dsqlScratch)
 		dsqlScratch->context->pop();
 		--dsqlScratch->scopeLevel;
 
+		if (!thisIf->condition && nextNotMatched != whenNotMatched.end())
+		{
+			ComparativeBoolNode* cmpNode = FB_NEW_POOL(pool) ComparativeBoolNode(pool,
+				blr_eql, MAKE_constant("1", CONSTANT_BOOLEAN), MAKE_constant("1", CONSTANT_BOOLEAN));
+			cmpNode->dsqlCheckBoolean = true;
+
+			NestConst<BoolExprNode> trueCondition(cmpNode);
+			thisIf->condition = doDsqlPass(dsqlScratch, trueCondition, false);
+		}
+
 		if (lastIf)
 			lastIf->falseAction = thisIf->condition ? thisIf : thisIf->trueAction;
 		else
 			insert = thisIf->condition ? thisIf : thisIf->trueAction;
 
 		lastIf = thisIf;
-
-		// If a statement executes unconditionally, no other will ever execute.
-		if (!thisIf->condition)
-			break;
 	}
 
 	// Build a IF (target.RDB$DB_KEY IS NULL).
@@ -5629,6 +5676,9 @@ DmlNode* ModifyNode::parse(thread_db* tdbb, MemoryPool& pool, CompilerScratch* c
 	ModifyNode* node = FB_NEW_POOL(pool) ModifyNode(pool);
 	node->orgStream = orgStream;
 	node->newStream = newStream;
+
+	if (csb->csb_blr_reader.peekByte() == blr_marks)
+		PAR_marks(csb); // unused
 
 	AutoSetRestore<StmtNode*> autoCurrentDMLNode(&csb->csb_currentDMLNode, node);
 
@@ -6621,7 +6671,7 @@ StmtNode* StoreNode::dsqlPass(DsqlCompilerScratch* dsqlScratch)
 	if (!needSavePoint || node->is<SavepointEncloseNode>())
 		return node;
 
-	return FB_NEW SavepointEncloseNode(getPool(), node);
+	return FB_NEW_POOL(getPool()) SavepointEncloseNode(getPool(), node);
 }
 
 string StoreNode::internalPrint(NodePrinter& printer) const
@@ -8192,7 +8242,7 @@ StmtNode* UpdateOrInsertNode::dsqlPass(DsqlCompilerScratch* dsqlScratch)
 	if (!needSavePoint || ret->is<SavepointEncloseNode>())
 		return ret;
 
-	return FB_NEW SavepointEncloseNode(getPool(), ret);
+	return FB_NEW_POOL(getPool()) SavepointEncloseNode(getPool(), ret);
 }
 
 string UpdateOrInsertNode::internalPrint(NodePrinter& printer) const

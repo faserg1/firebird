@@ -963,7 +963,7 @@ struct rem_port : public Firebird::GlobalStorage, public Firebird::RefCounted
 	struct linger	port_linger;		// linger value as defined by SO_LINGER
 	Rdb*			port_context;
 	Thread::Handle	port_events_thread;	// handle of thread, handling incoming events
-	ThreadId		port_events_threadId;
+	Thread			port_events_threadId;
 	RemotePortGuard* port_thread_guard;	// will close port_events_thread in safe way
 #ifdef WIN_NT
 	HANDLE			port_pipe;			// port pipe handle
@@ -1033,7 +1033,7 @@ public:
 		port_server(0), port_server_flags(0), port_protocol(0), port_buff_size(rpt / 2),
 		port_flags(0), port_connect_timeout(0), port_dummy_packet_interval(0),
 		port_dummy_timeout(0), port_handle(INVALID_SOCKET), port_channel(INVALID_SOCKET), port_context(0),
-		port_events_thread(0), port_events_threadId(0), port_thread_guard(0),
+		port_events_thread(0), port_thread_guard(0),
 #ifdef WIN_NT
 		port_pipe(INVALID_HANDLE_VALUE), port_event(INVALID_HANDLE_VALUE),
 #endif
@@ -1151,15 +1151,7 @@ public:
 	}
 
 	// release reference that was created in constructor
-	bool releasePort()
-	{
-		if (port_flags & PORT_released)
-			return false;
-
-		port_flags |= PORT_released;
-		release();
-		return true;
-	}
+	bool releasePort();
 
 public:
 	// TMN: Beginning of C++ port
@@ -1192,7 +1184,7 @@ public:
 	class RecvQueState
 	{
 	public:
-		int save_handy;
+		unsigned save_handy;
 		FB_SIZE_T save_private;
 		FB_SIZE_T save_qoffset;
 

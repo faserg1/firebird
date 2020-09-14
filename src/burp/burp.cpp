@@ -168,6 +168,44 @@ int BURP_main(Firebird::UtilSvc* uSvc)
 }
 
 
+static void binOut(const void* data, unsigned len)
+{
+#ifdef WIN_NT
+	static int bin = -1;
+	if (bin == -1)
+	{
+		bin = fileno(stdout);
+		_setmode(bin, _O_BINARY);
+	}
+#else
+	const int bin = 1;
+#endif
+
+	FB_UNUSED(write(bin, data, len));
+}
+
+
+static unsigned int binIn(void* data, int len)
+{
+#ifdef WIN_NT
+	static int bin = -1;
+	if (bin == -1)
+	{
+		bin = fileno(stdin);
+		_setmode(bin, _O_BINARY);
+	}
+#else
+	const int bin = 0;
+#endif
+
+	int n = read(bin, data, len);
+	if (n < 0)
+		Firebird::system_call_failed::raise("read(stdin)");
+
+	return n;
+}
+
+
 static int svc_api_gbak(Firebird::UtilSvc* uSvc, const Switches& switches)
 {
 /**********************************************
@@ -356,6 +394,7 @@ static int svc_api_gbak(Firebird::UtilSvc* uSvc, const Switches& switches)
 			//stream verbint_val into a SPB
 			put_vax_long(reinterpret_cast<UCHAR*>(thd_ptr), verbint_val);
 			thd_ptr += sizeof(SLONG);
+			flag_verbose = true;
 		}
 
 		const USHORT thdlen = thd_ptr - thd;
@@ -369,13 +408,30 @@ static int svc_api_gbak(Firebird::UtilSvc* uSvc, const Switches& switches)
 			return FINI_ERROR;
 		}
 
-		const char sendbuf[] = { isc_info_svc_line };
-		char respbuf[1024];
-		const char* sl;
-		do {
-			if (isc_service_query(status, &svc_handle, NULL, 0, NULL,
-								  sizeof(sendbuf), sendbuf,
-								  sizeof(respbuf), respbuf))
+		// What are we going to receive from service manager
+		Firebird::ClumpletWriter receive(Firebird::ClumpletWriter::SpbReceiveItems, 16);
+		receive.insertTag(flag_verbose ? isc_info_svc_line : isc_info_svc_to_eof);
+		if (flag_restore)
+			receive.insertTag(isc_info_svc_stdin);
+
+		unsigned int stdinRequest = 0;
+		for (bool running = true; running;) {
+			// Were we requested to send some data
+			Firebird::ClumpletWriter send(Firebird::ClumpletWriter::SpbSendItems, MAX_DPB_SIZE);
+			char respbuf[16384];
+			if (stdinRequest)
+			{
+				if (stdinRequest > sizeof(respbuf))
+					stdinRequest = sizeof(respbuf);
+
+				stdinRequest = binIn(respbuf, stdinRequest);
+				send.insertBytes(isc_info_svc_line, respbuf, stdinRequest);
+			}
+
+			if (isc_service_query(status, &svc_handle, NULL,
+					send.getBufferLength(), reinterpret_cast<const char*>(send.getBuffer()),
+					receive.getBufferLength(), reinterpret_cast<const char*>(receive.getBuffer()),
+					sizeof(respbuf), respbuf))
 			{
 				BURP_print_status(true, status);
 				isc_service_detach(status, &svc_handle);
@@ -383,27 +439,43 @@ static int svc_api_gbak(Firebird::UtilSvc* uSvc, const Switches& switches)
 				return FINI_ERROR;
 			}
 
-			char* p = respbuf;
-			sl = p;
-
-			if (*p++ == isc_info_svc_line)
+			Firebird::ClumpletReader resp(Firebird::ClumpletReader::SpbResponse,
+				reinterpret_cast<const UCHAR*>(respbuf), sizeof(respbuf));
+			stdinRequest = 0;
+			int len = 0;
+			Firebird::string line;
+			bool not_ready = false;
+			for (resp.rewind(); running && !resp.isEof(); resp.moveNext())
 			{
-				const ISC_USHORT len = (ISC_USHORT) isc_vax_integer(p, sizeof(ISC_USHORT));
-				p += sizeof(ISC_USHORT);
-				if (!len)
+				switch(resp.getClumpTag())
 				{
-					if (*p == isc_info_data_not_ready)
-						continue;
-
-					if (*p == isc_info_end)
-						break;
+				case isc_info_svc_to_eof:
+					len = resp.getClumpLength();
+					if (len)
+						binOut(resp.getBytes(), len);
+					break;
+				case isc_info_svc_line:
+					resp.getString(line);
+					len = line.length();
+					if (len)
+						BURP_output(false, "%s\n", line.c_str());
+					break;
+				case isc_info_svc_stdin:
+					stdinRequest = resp.getInt();
+					break;
+				case isc_info_end:
+					running = false;
+					break;
+				case isc_info_data_not_ready:
+				case isc_info_svc_timeout:
+					not_ready = true;
+					break;
 				}
-
-				fb_assert(p + len < respbuf + sizeof(respbuf));
-				p[len] = '\0';
-				BURP_output(false, "%s\n", p);
 			}
-		} while (*sl == isc_info_svc_line);
+
+			if (len || stdinRequest || not_ready)
+				running = true;
+		}
 
 		isc_service_detach(status, &svc_handle);
 		return FINI_OK;
@@ -983,7 +1055,7 @@ int gbak(Firebird::UtilSvc* uSvc)
 	}
 
 	// Initialize 'dpb'
-	Firebird::ClumpletWriter dpb(Firebird::ClumpletReader::Tagged, MAX_DPB_SIZE, isc_dpb_version1);
+	Firebird::ClumpletWriter dpb(Firebird::ClumpletReader::dpbList, MAX_DPB_SIZE);
 
 	dpb.insertString(isc_dpb_gbak_attach, FB_VERSION, fb_strlen(FB_VERSION));
 	uSvc->fillDpb(dpb);

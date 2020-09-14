@@ -130,6 +130,24 @@ public:
 		instances->shutdown();
 	}
 
+	static void forceClean(IProvider* p, const char* secDbName)
+	{
+		cleanup();
+
+		ClumpletWriter dpb(ClumpletReader::dpbList, MAX_DPB_SIZE);
+		dpb.insertByte(isc_dpb_sec_attach, TRUE);
+		dpb.insertByte(isc_dpb_gfix_attach, TRUE);
+		dpb.insertTag(isc_dpb_nolinger);
+		dpb.insertString(isc_dpb_user_name, SYSDBA_USER_NAME, fb_strlen(SYSDBA_USER_NAME));
+		dpb.insertString(isc_dpb_config, ParsedList::getNonLoopbackProviders(secDbName));
+
+		Jrd::FbLocalStatus status;
+		RefPtr<IAttachment> att(REF_NO_INCR, p->attachDatabase(&status, secDbName, dpb.getBufferLength(), dpb.getBuffer()));
+		check(&status);
+
+		HANDSHAKE_DEBUG(fprintf(stderr, "Srv SRP: gfix-like attach to sec db %s\n", secDbName));
+	}
+
 	SecurityDatabase(const char* secDbName, ICryptKeyCallback* cryptCallback)
 		: att(NULL), tra(NULL), stmt(NULL)
 	{
@@ -142,34 +160,66 @@ public:
 			status->init();		// ignore possible errors like missing call in provider
 		}
 
-		ClumpletWriter dpb(ClumpletReader::dpbList, MAX_DPB_SIZE);
-		dpb.insertByte(isc_dpb_sec_attach, TRUE);
-		dpb.insertString(isc_dpb_user_name, SYSDBA_USER_NAME, fb_strlen(SYSDBA_USER_NAME));
-		dpb.insertString(isc_dpb_config, ParsedList::getNonLoopbackProviders(secDbName));
-		att = p->attachDatabase(&status, secDbName, dpb.getBufferLength(), dpb.getBuffer());
-		check(&status);
-		HANDSHAKE_DEBUG(fprintf(stderr, "Srv SRP: attached sec db %s\n", secDbName));
-
-		const UCHAR tpb[] =
+		try
 		{
-			isc_tpb_version1,
-			isc_tpb_read,
-			isc_tpb_read_committed,
-			isc_tpb_rec_version,
-			isc_tpb_wait
-		};
-		tra = att->startTransaction(&status, sizeof(tpb), tpb);
-		check(&status);
-		HANDSHAKE_DEBUG(fprintf(stderr, "Srv: SRP1: started transaction\n"));
+			ClumpletWriter dpb(ClumpletReader::dpbList, MAX_DPB_SIZE);
+			dpb.insertByte(isc_dpb_sec_attach, TRUE);
+			dpb.insertString(isc_dpb_user_name, SYSDBA_USER_NAME, fb_strlen(SYSDBA_USER_NAME));
+			dpb.insertString(isc_dpb_config, ParsedList::getNonLoopbackProviders(secDbName));
+			att = p->attachDatabase(&status, secDbName, dpb.getBufferLength(), dpb.getBuffer());
+			check(&status);
+			HANDSHAKE_DEBUG(fprintf(stderr, "Srv SRP: attached sec db %s\n", secDbName));
 
-		const char* sql =
-			"SELECT PLG$VERIFIER, PLG$SALT FROM PLG$SRP WHERE PLG$USER_NAME = ? AND PLG$ACTIVE";
-		stmt = att->prepare(&status, tra, 0, sql, 3, IStatement::PREPARE_PREFETCH_METADATA);
-		if (status->getState() & IStatus::STATE_ERRORS)
-		{
-			checkStatusVectorForMissingTable(status->getErrors());
-			status_exception::raise(&status);
+			const UCHAR tpb[] =
+			{
+				isc_tpb_version1,
+				isc_tpb_read,
+				isc_tpb_read_committed,
+				isc_tpb_rec_version,
+				isc_tpb_wait
+			};
+			tra = att->startTransaction(&status, sizeof(tpb), tpb);
+			check(&status);
+			HANDSHAKE_DEBUG(fprintf(stderr, "Srv: SRP1: started transaction\n"));
+
+			const char* sql =
+				"SELECT PLG$VERIFIER, PLG$SALT FROM PLG$SRP WHERE PLG$USER_NAME = ? AND PLG$ACTIVE";
+			stmt = att->prepare(&status, tra, 0, sql, 3, IStatement::PREPARE_PREFETCH_METADATA);
+			if (status->getState() & IStatus::STATE_ERRORS)
+			{
+				class Cleanup : public SrvCleanup
+				{
+				public:
+					Cleanup(IProvider* p_p, const char* p_secDbName)
+						: p(p_p), secDbName(p_secDbName)
+					{ }
+
+					void cleanup()
+					{
+						forceClean(p, secDbName);
+					}
+
+				private:
+					IProvider* p;
+					const char* secDbName;
+				};
+				Cleanup c(p, secDbName);
+
+				checkStatusVectorForMissingTable(status->getErrors(), &c);
+				status_exception::raise(&status);
+			}
 		}
+		catch(const Exception&)
+ 		{
+			if (stmt)
+				stmt->release();
+			if (tra)
+				tra->release();
+			if (att)
+				att->release();
+
+			throw;
+ 		}
 	}
 
 private:

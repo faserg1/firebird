@@ -1526,34 +1526,35 @@ void SRVR_multi_thread( rem_port* main_port, USHORT flags)
 	{
 		set_server(main_port, flags);
 
-		// We need to have this error handler as there is so much underlaying code
-		// that is depending on it being there.  The expected failure
-		// that can occur in the call paths from here is out-of-memory
-		// and it is unknown if other failures can get us here
-		// Failures can occur from set_server as well as RECEIVE
-		//
-		// Note that if a failure DOES occur, we reenter the loop and try to continue
-		// operations.  This is important as this is the main receive loop for
-		// new incoming requests, if we exit here no new requests can come to the
-		// server.
-
-		try
-		{
-			const size_t MAX_PACKET_SIZE = MAX_SSHORT;
-			const SSHORT bufSize = MIN(main_port->port_buff_size, MAX_PACKET_SIZE);
-			UCharBuffer packet_buffer;
-			UCHAR* const buffer = packet_buffer.getBuffer(bufSize);
+		const size_t MAX_PACKET_SIZE = MAX_SSHORT;
+		const SSHORT bufSize = MIN(main_port->port_buff_size, MAX_PACKET_SIZE);
+		UCharBuffer packet_buffer;
+		UCHAR* const buffer = packet_buffer.getBuffer(bufSize);
 
 #ifdef DEV_BUILD
 #ifndef WIN_NT
-			if (isatty(2))
-			{
-				fprintf(stderr, "Server started successfully\n");
-			}
+		if (isatty(2))
+		{
+			fprintf(stderr, "Server started successfully\n");
+		}
 #endif
 #endif
-			// When this loop exits, the server will no longer receive requests
-			while (true)
+
+		// When this loop exits, the server will no longer receive requests
+		while (true)
+		{
+
+			// We need to have this error handler as there is so much underlaying code
+			// that is depending on it being there.  The expected failure
+			// that can occur in the call paths from here is out-of-memory
+			// and it is unknown if other failures can get us here
+			// Failures can occur from set_server as well as RECEIVE
+			//
+			// Note that if a failure DOES occur, we reenter the loop and try to continue
+			// operations.  This is important as this is the main receive loop for
+			// new incoming requests, if we exit here no new requests can come to the
+			// server.
+			try
 			{
 				SSHORT dataSize;
 				// We have a request block - now get some information to stick into it
@@ -1664,81 +1665,68 @@ void SRVR_multi_thread( rem_port* main_port, USHORT flags)
 				}
 				port = 0;
 			}
-
-			Worker::shutdown();
-
-			// All worker threads are stopped and will never run any more
-			// Disconnect remaining ports gracefully
-			rem_port* run_port = main_port;
-			while (run_port)
+			catch (const Exception& e)
 			{
-				rem_port* current_port = run_port;	// important order of operations
-				run_port = run_port->port_next;		// disconnect() can modify linked list of ports
-				if (!(current_port->port_flags & PORT_disconnect))
-					current_port->disconnect(NULL, NULL);
-			}
-		}
-		catch (const Exception& e)
-		{
-			gds__log("SRVR_multi_thread: shutting down due to unhandled exception");
-			LocalStatus ls;
-			CheckStatusWrapper status_vector(&ls);
-			e.stuffException(&status_vector);
-			iscLogStatus(NULL, &status_vector);
+				// First of all log unhandled exception
+				LocalStatus ls;
+				CheckStatusWrapper status_vector(&ls);
+				e.stuffException(&status_vector);
+				iscLogStatus("SRVR_multi_thread: unhandled exception", &status_vector);
 
-			// If we got as far as having a port allocated before the error, disconnect it
-			// gracefully.
+				// If we got as far as having a port allocated before the error, disconnect it
+				// gracefully.
 
-			if (port)
-			{
-/*
-#if defined(DEV_BUILD) && defined(DEBUG)
-				ConsolePrintf("%%ISERVER-F-NOPORT, no port in a storm\r\n");
-#endif
-*/
-				gds__log("SRVR_multi_thread: forcefully disconnecting a port");
-
-				// To handle recursion within the error handler
-				try
+				if (port)
 				{
-					// If we have a port, request really should be non-null, but just in case ...
-					if (request != NULL)
-					{
-						// Send client a real status indication of why we disconnected them
-						// Note that send_response() can post errors that wind up in this same handler
-/*
-#if defined(DEV_BUILD) && defined(DEBUG)
-						ConsolePrintf("%%ISERVER-F-NOMEM, virtual memory exhausted\r\n");
-#endif
-*/
-						port->send_response(&request->req_send, 0, 0, &status_vector, false);
-						port->disconnect(&request->req_send, &request->req_receive);
-					}
-					else
-					{
-						// Can't tell the client much, just make 'em go away.  Their side should detect
-						// a network error
+					gds__log("SRVR_multi_thread: forcefully disconnecting a port");
 
+					// Avoid errors inside handler
+					try
+					{
+						// If we have a port, request really should be non-null, but just in case ...
+						if (request != NULL)
+						{
+							// Send client a real status indication of why we disconnected them
+							// Note that send_response() can post errors that wind up in this same handler
+							port->send_response(&request->req_send, 0, 0, &status_vector, false);
+							port->disconnect(&request->req_send, &request->req_receive);
+						}
+						else
+						{
+							// Can't tell the client much, just make 'em go away.  Their side should detect
+							// a network error
+							port->disconnect(NULL, NULL);
+						}
+					}	// try
+					catch (const Exception&)
+					{
 						port->disconnect(NULL, NULL);
 					}
-					port = NULL;
 
-				}	// try
-				catch (const Exception&)
-				{
-					port->disconnect(NULL, NULL);
 					port = NULL;
 				}
-			}
 
-			// There was an error in the processing of the request, if we have allocated
-			// a request, free it up and continue.
-
-			if (request != NULL)
-			{
-				free_request(request);
-				request = NULL;
+				// There was an error in the processing of the request, if we have allocated
+				// a request, free it up and continue.
+				if (request != NULL)
+				{
+					free_request(request);
+					request = NULL;
+				}
 			}
+		}
+
+		Worker::shutdown();
+
+		// All worker threads are stopped and will never run any more
+		// Disconnect remaining ports gracefully
+		rem_port* run_port = main_port;
+		while (run_port)
+		{
+			rem_port* current_port = run_port;	// important order of operations
+			run_port = run_port->port_next;		// disconnect() can modify linked list of ports
+			if (!(current_port->port_flags & PORT_disconnect))
+				current_port->disconnect(NULL, NULL);
 		}
 
 		if (main_port->port_async_receive)

@@ -4871,7 +4871,7 @@ static void printMap(bool extract, bool global, char* name, char* usng, char* pl
 	{
 		isqlGlob.printf("CREATE ");
 		if (global)
-			isqlGlob.printf("GLOBAL ");
+			isqlGlob.printf("OR ALTER GLOBAL ");
 	}
 	printIdent(extract, name, extract ? "MAPPING %s " : "%s ");
 

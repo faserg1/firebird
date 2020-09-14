@@ -2248,7 +2248,12 @@ SharedMemoryBase::SharedMemoryBase(const TEXT* filename, ULONG length, IpcObject
 				CloseHandle(file_handle);
 
 				if (err == ERROR_USER_MAPPED_FILE)
+				{
+					if (retry_count < 50)	// 0.5 sec
+						goto retry;
+
 					Arg::Gds(isc_instance_conflict).raise();
+				}
 				else
 					system_call_failed::raise("SetFilePointer", err);
 			}

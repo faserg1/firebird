@@ -189,10 +189,28 @@ void ERR_post_warning(const Arg::StatusVector& v)
  **************************************/
 	fb_assert(v.value()[0] == isc_arg_warning);
 
-	FbStatusVector* const status_vector = JRD_get_thread_data()->tdbb_status_vector;
-	Arg::StatusVector warnings(status_vector->getWarnings());
-	warnings << v;
-	status_vector->setWarnings(warnings.value());
+	FbStatusVector* const statusVector = JRD_get_thread_data()->tdbb_status_vector;
+	const ISC_STATUS* toAdd = v.value();
+	const unsigned lenToAdd = v.length();
+
+	if (!(statusVector->getState() & IStatus::STATE_WARNINGS))
+	{
+		// this is a blank status vector just stuff the status
+		statusVector->setWarnings2(lenToAdd, toAdd);
+		return;
+	}
+
+	const ISC_STATUS* oldVector = statusVector->getErrors();
+	unsigned lenOld = fb_utils::statusLength(oldVector);
+
+	// check for duplicated error code
+	if (fb_utils::subStatus(oldVector, lenOld, toAdd, lenToAdd) != ~0u)
+		return;
+
+	StaticStatusVector tmpWarn;
+	tmpWarn.assign(oldVector, lenOld);
+	tmpWarn.append(toAdd, lenToAdd);
+	statusVector->setWarnings2(tmpWarn.getCount(), tmpWarn.begin());
 }
 
 

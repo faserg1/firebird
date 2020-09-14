@@ -87,7 +87,7 @@ void ClumpletReader::dump() const
 
 	try {
 		ClumpletDump d(kind, getBuffer(), getBufferLength());
-		int t = (kind == SpbStart || kind == UnTagged || kind == WideUnTagged) ? -1 : d.getBufferTag();
+		int t = (kind == SpbStart || kind == UnTagged || kind == WideUnTagged || kind == SpbResponse) ? -1 : d.getBufferTag();
 		gds__log("Tag=%d Offset=%d Length=%d Eof=%d\n", t, getCurOffset(), getBufferLength(), isEof());
 		for (d.rewind(); !(d.isEof()); d.moveNext())
 		{
@@ -240,6 +240,7 @@ UCHAR ClumpletReader::getBufferTag() const
 	case WideUnTagged:
 	case SpbSendItems:
 	case SpbReceiveItems:
+	case SpbResponse:
 		usage_mistake("buffer is not tagged");
 		return 0;
 	case SpbAttach:
@@ -478,8 +479,52 @@ ClumpletReader::ClumpletType ClumpletReader::getClumpletType(UCHAR tag) const
 		}
 		invalid_structure("wrong spb state");
 		break;
+	case SpbResponse:
+		switch(tag)
+		{
+		case isc_info_svc_version:
+		case isc_spb_num_att:
+		case isc_spb_num_db:
+		case isc_spb_multi_tra_id:
+		case isc_spb_single_tra_id:
+		case isc_spb_tra_id:
+		case isc_info_svc_stdin:
+		case isc_info_svc_capabilities:
+			return IntSpb;
+		case isc_spb_multi_tra_id_64:
+		case isc_spb_single_tra_id_64:
+		case isc_spb_tra_id_64:
+			return BigIntSpb;
+		case isc_info_svc_server_version:
+		case isc_info_svc_implementation:
+		case isc_info_svc_get_env_msg:
+		case isc_info_svc_get_env:
+		case isc_info_svc_get_env_lock:
+		case isc_info_svc_user_dbpath:
+		case isc_spb_dbname:
+		case isc_spb_tra_host_site:
+		case isc_spb_tra_remote_site:
+		case isc_spb_tra_db_path:
+		case isc_info_svc_get_users:
+		case isc_info_svc_line:
+		case isc_info_svc_to_eof:
+			return StringSpb;
+		case isc_info_end:
+		case isc_info_svc_svr_db_info:
+		case isc_info_svc_limbo_trans:
+		case isc_info_flag_end:
+		case isc_info_truncated:
+		case isc_info_svc_timeout:
+		case isc_info_data_not_ready:
+			return SingleTpb;
+		case isc_spb_tra_state:
+		case isc_spb_tra_advise:
+			return ByteSpb;
+		}
+		invalid_structure("unrecognized service response tag");
+		break;
 	}
-	invalid_structure("unknown reason");
+	invalid_structure("unknown clumplet kind");
 	return SingleTpb;
 }
 
@@ -580,6 +625,9 @@ FB_SIZE_T ClumpletReader::getClumpletSize(bool wTag, bool wLength, bool wData) c
 	case ByteSpb:
 		dataSize = 1;
 		break;
+
+	default:
+		invalid_structure("unknown clumplet type");
 	}
 
 	const FB_SIZE_T total = 1 + lengthSize + dataSize;
@@ -626,6 +674,7 @@ void ClumpletReader::rewind()
 	case SpbStart:
 	case SpbSendItems:
 	case SpbReceiveItems:
+	case SpbResponse:
 		cur_offset = 0;
 		break;
 	default:

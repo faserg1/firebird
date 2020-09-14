@@ -80,8 +80,8 @@ static int		xdrwnet_create(XDR*, rem_port*, UCHAR*, USHORT, xdr_op);
 static bool_t	xdrwnet_endofrecord(XDR*);//, int);
 static bool		wnet_error(rem_port*, const TEXT*, ISC_STATUS, int);
 static void		wnet_gen_error(rem_port*, const Arg::StatusVector& v);
-static bool_t	wnet_getbytes(XDR*, SCHAR*, u_int);
-static bool_t	wnet_putbytes(XDR*, const SCHAR*, u_int);
+static bool_t	wnet_getbytes(XDR*, SCHAR*, unsigned);
+static bool_t	wnet_putbytes(XDR*, const SCHAR*, unsigned);
 static bool_t	wnet_read(XDR*);
 static bool_t	wnet_write(XDR*); //, int);
 #ifdef DEBUG
@@ -753,7 +753,7 @@ static void disconnect(rem_port* port)
 
 	wnet_ports->unRegisterPort(port);
 
-	if (port->port_thread_guard && port->port_events_thread && !Thread::isCurrent(port->port_events_threadId))
+	if (port->port_thread_guard && port->port_events_thread && !port->port_events_threadId.isCurrent())
 		port->port_thread_guard->setWait(port->port_events_thread);
 	else
 		port->releasePort();
@@ -1048,7 +1048,7 @@ static void wnet_gen_error (rem_port* port, const Arg::StatusVector& v)
 }
 
 
-static bool_t wnet_getbytes( XDR* xdrs, SCHAR* buff, u_int count)
+static bool_t wnet_getbytes( XDR* xdrs, SCHAR* buff, unsigned bytecount)
 {
 /**************************************
  *
@@ -1060,8 +1060,6 @@ static bool_t wnet_getbytes( XDR* xdrs, SCHAR* buff, u_int count)
  *	Get a bunch of bytes from a memory stream if it fits.
  *
  **************************************/
-	SLONG bytecount = count;
-
 	// Use memcpy to optimize bulk transfers.
 
 	while (bytecount > (SLONG) sizeof(ISC_QUAD))
@@ -1100,9 +1098,9 @@ static bool_t wnet_getbytes( XDR* xdrs, SCHAR* buff, u_int count)
 		return TRUE;
 	}
 
-	while (--bytecount >= 0)
+	while (bytecount--)
 	{
-		if (!xdrs->x_handy && !wnet_read(xdrs))
+		if (xdrs->x_handy == 0 && !wnet_read(xdrs))
 			return FALSE;
 		*buff++ = *xdrs->x_private++;
 		--xdrs->x_handy;
@@ -1112,7 +1110,7 @@ static bool_t wnet_getbytes( XDR* xdrs, SCHAR* buff, u_int count)
 }
 
 
-static bool_t wnet_putbytes( XDR* xdrs, const SCHAR* buff, u_int count)
+static bool_t wnet_putbytes( XDR* xdrs, const SCHAR* buff, unsigned count)
 {
 /**************************************
  *
@@ -1164,9 +1162,9 @@ static bool_t wnet_putbytes( XDR* xdrs, const SCHAR* buff, u_int count)
 		return TRUE;
 	}
 
-	while (--bytecount >= 0)
+	while (bytecount--)
 	{
-		if (xdrs->x_handy <= 0 && !wnet_write(xdrs /*, 0*/))
+		if (xdrs->x_handy == 0 && !wnet_write(xdrs /*, 0*/))
 			return FALSE;
 		--xdrs->x_handy;
 		*xdrs->x_private++ = *buff++;
@@ -1220,7 +1218,7 @@ static bool_t wnet_read( XDR* xdrs)
 			return FALSE;
 	}
 
-	xdrs->x_handy = (int) (p - xdrs->x_base);
+	xdrs->x_handy = p - xdrs->x_base;
 	xdrs->x_private = xdrs->x_base;
 
 	return TRUE;

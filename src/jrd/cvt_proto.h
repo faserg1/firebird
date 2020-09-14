@@ -55,7 +55,7 @@ namespace Jrd
 		virtual CHARSET_ID getChid(const dsc* d);
 		virtual CharSet* getToCharset(CHARSET_ID charset2);
 		virtual void validateData(CharSet* toCharset, SLONG length, const UCHAR* q);
-		virtual void validateLength(CharSet* toCharset, SLONG toLength, const UCHAR* start,
+		virtual ULONG validateLength(CharSet* toCharset, SLONG toLength, const UCHAR* start,
 			const USHORT to_size);
 		virtual SLONG getCurDate();
 		virtual void isVersion4(bool& v4);

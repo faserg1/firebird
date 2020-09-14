@@ -169,7 +169,7 @@ private:
 	Firebird::RWLock renameLock;
 
 	UnicodeCollationHolder unicodeCollation;
-	typedef Firebird::SimilarToMatcher <ULONG, Jrd::UpcaseConverter<Jrd::CanonicalConverter<> > >
+	typedef Firebird::SimilarToMatcher <ULONG, Jrd::CanonicalConverter<Jrd::UpcaseConverter<> > >
 		TraceSimilarToMatcher;
 	Firebird::AutoPtr<TraceSimilarToMatcher> include_matcher, exclude_matcher;
 
@@ -178,8 +178,8 @@ private:
 	GdsCodesArray include_codes;
 	GdsCodesArray exclude_codes;
 
-	void appendGlobalCounts(const PerformanceInfo* info);
-	void appendTableCounts(const PerformanceInfo* info);
+	void appendGlobalCounts(const Firebird::PerformanceInfo* info);
+	void appendTableCounts(const Firebird::PerformanceInfo* info);
 	void appendParams(Firebird::ITraceParams* params);
 	void appendServiceQueryParams(size_t send_item_length, const ntrace_byte_t* send_items,
 								  size_t recv_item_length, const ntrace_byte_t* recv_items);

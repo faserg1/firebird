@@ -61,6 +61,7 @@ SSHORT			PAR_find_proc_field(const Jrd::jrd_prc*, const Firebird::MetaName&);
 Jrd::ValueExprNode* PAR_gen_field(Jrd::thread_db* tdbb, StreamType stream, USHORT id, bool byId = false);
 Jrd::ValueExprNode* PAR_make_field(Jrd::thread_db*, Jrd::CompilerScratch*, USHORT, const Firebird::MetaName&);
 Jrd::CompoundStmtNode*	PAR_make_list(Jrd::thread_db*, Jrd::StmtNodeStack&);
+ULONG			PAR_marks(Jrd::CompilerScratch*);
 USHORT			PAR_name(Jrd::CompilerScratch*, Firebird::MetaName&);
 FB_SIZE_T		PAR_name(Jrd::CompilerScratch* csb, Firebird::string& name);
 Jrd::CompilerScratch*	PAR_parse(Jrd::thread_db*, const UCHAR* blr, ULONG blr_length,

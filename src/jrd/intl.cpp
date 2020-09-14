@@ -805,7 +805,7 @@ CsConvert INTL_convert_lookup(thread_db* tdbb, CHARSET_ID to_cs, CHARSET_ID from
 }
 
 
-int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
+int INTL_convert_string(dsc* to, const dsc* from, Firebird::Callbacks* cb)
 {
 /**************************************
  *
@@ -844,7 +844,7 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 
 	UCHAR* from_ptr;
 	USHORT from_type;
-	const USHORT from_len = CVT_get_string_ptr(from, &from_type, &from_ptr, NULL, 0, err);
+	const USHORT from_len = CVT_get_string_ptr(from, &from_type, &from_ptr, NULL, 0, cb->err);
 
 	const ULONG to_size = TEXT_LEN(to);
 	ULONG from_fill, to_fill;
@@ -859,7 +859,7 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 		if (from_cs != to_cs && to_cs != CS_BINARY && to_cs != CS_NONE && from_cs != CS_NONE)
 		{
 			const ULONG to_len = INTL_convert_bytes(tdbb, to_cs, to->dsc_address, to_size,
-										from_cs, from_ptr, from_len, err);
+										from_cs, from_ptr, from_len, cb->err);
 			toLength = to_len;
 			to_fill = to_size - to_len;
 			from_fill = 0;		// Convert_bytes handles source truncation
@@ -871,7 +871,7 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 
 			ULONG to_len = MIN(from_len, to_size);
 			if (!toCharSet->wellFormed(to_len, q))
-				err(Arg::Gds(isc_malformed_string));
+				cb->err(Arg::Gds(isc_malformed_string));
 			toLength = to_len;
 			from_fill = from_len - to_len;
 			to_fill = to_size - to_len;
@@ -892,7 +892,7 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 		if (from_cs != to_cs && to_cs != CS_BINARY && to_cs != CS_NONE && from_cs != CS_NONE)
 		{
 			const ULONG to_len = INTL_convert_bytes(tdbb, to_cs, to->dsc_address, to_size,
-										from_cs, from_ptr, from_len, err);
+										from_cs, from_ptr, from_len, cb->err);
 			toLength = to_len;
 			to->dsc_address[to_len] = 0;
 			from_fill = 0;		// Convert_bytes handles source truncation
@@ -903,7 +903,7 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 
 			ULONG to_len = MIN(from_len, to_size);
 			if (!toCharSet->wellFormed(to_len, q))
-				err(Arg::Gds(isc_malformed_string));
+				cb->err(Arg::Gds(isc_malformed_string));
 			toLength = to_len;
 			from_fill = from_len - to_len;
 			if (to_len)
@@ -922,8 +922,11 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 		{
 			UCHAR* vstr = reinterpret_cast<UCHAR*>(((vary*) to->dsc_address)->vary_string);
 			start = vstr;
-			const ULONG to_len = INTL_convert_bytes(tdbb, to_cs, vstr,
-										to_size, from_cs, from_ptr, from_len, err);
+			ULONG to_len = INTL_convert_bytes(tdbb, to_cs, vstr,
+										to_size, from_cs, from_ptr, from_len, cb->err);
+
+			to_len = cb->validateLength(toCharSet, to_len, vstr, to_size);
+
 			toLength = to_len;
 			((vary*) to->dsc_address)->vary_length = to_len;
 			from_fill = 0;		// Convert_bytes handles source truncation
@@ -933,7 +936,10 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 			// binary string can always be converted TO by byte-copy
 			ULONG to_len = MIN(from_len, to_size);
 			if (!toCharSet->wellFormed(to_len, q))
-				err(Arg::Gds(isc_malformed_string));
+				cb->err(Arg::Gds(isc_malformed_string));
+
+			to_len = cb->validateLength(toCharSet, to_len, q, to_size);
+
 			toLength = to_len;
 			from_fill = from_len - to_len;
 			((vary*) p)->vary_length = to_len;
@@ -956,7 +962,7 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 		!(toCharSet->getFlags() & CHARSET_LEGACY_SEMANTICS) &&
 		src_len > dest_len)
 	{
-		err(Arg::Gds(isc_arith_except) << Arg::Gds(isc_string_truncation) <<
+		cb->err(Arg::Gds(isc_arith_except) << Arg::Gds(isc_string_truncation) <<
 			Arg::Gds(isc_trunc_limits) << Arg::Num(dest_len) << Arg::Num(src_len));
 	}
 
@@ -964,8 +970,10 @@ int INTL_convert_string(dsc* to, const dsc* from, ErrorFunction err)
 	{
 		// Make sure remaining characters on From string are spaces
 		if (!allSpaces(INTL_charset_lookup(tdbb, from_cs), q, from_fill, 0))
-			err(Arg::Gds(isc_arith_except) << Arg::Gds(isc_string_truncation) <<
+		{
+			cb->err(Arg::Gds(isc_arith_except) << Arg::Gds(isc_string_truncation) <<
 				Arg::Gds(isc_trunc_limits) << Arg::Num(dest_len) << Arg::Num(src_len));
+		}
 	}
 
 	return 0;

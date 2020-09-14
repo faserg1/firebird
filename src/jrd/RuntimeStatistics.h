@@ -28,8 +28,14 @@
 #include "../common/classes/init.h"
 #include "../common/classes/tree.h"
 
-struct TraceCounts;		// declared in ntrace.h
-struct PerformanceInfo;	// declared in ntrace.h
+namespace Firebird {
+
+// declared in firebird/Interface.h
+struct TraceCounts;
+struct PerformanceInfo;
+
+}; // namespace Firebird
+
 
 namespace Jrd {
 
@@ -38,7 +44,7 @@ class Database;
 class thread_db;
 class jrd_rel;
 
-typedef Firebird::HalfStaticArray<TraceCounts, 5> TraceCountsArray;
+typedef Firebird::HalfStaticArray<Firebird::TraceCounts, 5> TraceCountsArray;
 
 // Runtime statistics class
 
@@ -216,8 +222,8 @@ public:
 
 	// Calculate difference between counts stored in this object and current
 	// counts of given request. Counts stored in object are destroyed.
-	PerformanceInfo* computeDifference(Attachment* att, const RuntimeStatistics& new_stat,
-		PerformanceInfo& dest, TraceCountsArray& temp);
+	Firebird::PerformanceInfo* computeDifference(Attachment* att, const RuntimeStatistics& new_stat,
+		Firebird::PerformanceInfo& dest, TraceCountsArray& temp);
 
 	// add difference between newStats and baseStats to our counters
 	// newStats and baseStats must be "in-sync"

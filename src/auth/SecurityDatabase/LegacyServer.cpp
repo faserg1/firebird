@@ -217,7 +217,7 @@ void SecurityDatabase::prepare(const char* secureDbName)
 	lookup_db = lookup_req = 0;
 
 	// Perhaps build up a dpb
-	ClumpletWriter dpb(ClumpletReader::Tagged, MAX_DPB_SIZE, isc_dpb_version1);
+	ClumpletWriter dpb(ClumpletReader::dpbList, MAX_DPB_SIZE);
 
 	// Attachment is for the security database
 	dpb.insertByte(isc_dpb_sec_attach, TRUE);

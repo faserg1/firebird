@@ -4,6 +4,9 @@
 #include "../common/sha.h"
 #include "../common/sha2/sha2.h"
 
+#ifndef AUTH_SRP_SRP_H
+#define AUTH_SRP_SRP_H
+
 #define SRP_DEBUG 0		// >0 - prints some debug info
 						// >1 - uses consts instead randoms, NEVER use in PRODUCTION!
 
@@ -158,7 +161,14 @@ void static inline dumpIt(const char* /*name*/, const Firebird::string& /*str*/)
 void static inline dumpBin(const char* /*name*/, const Firebird::string& /*str*/) { }
 #endif
 
+class SrvCleanup
+{
+public:
+	virtual void cleanup() = 0;
+};
 
-void checkStatusVectorForMissingTable(const ISC_STATUS* v);
+void checkStatusVectorForMissingTable(const ISC_STATUS* v, SrvCleanup* cleanup = NULL);
 
 } // namespace Auth
+
+#endif // AUTH_SRP_SRP_H
