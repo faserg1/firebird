@@ -1,4 +1,94 @@
   **************************
+  * v3.0.7
+  **************************
+
+    * Improvement CORE-6362
+        Better diagnostic for the 'Missing security context' error
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Improvement CORE-6339
+        Detach server from the security database when missing plugin data structures are causing an error
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6396
+        Unknown tag (0) in isc_svc_query() results
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6392
+        Space in database path prevent working gbak -se ... -b "pat to/database" backup
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6388
+        Client asserts when closing the event thread in the debug build
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6370
+        Server leaks memory when a computed field containing COALESCE/CAST is selected
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6367
+        Segfault when receiving a malformed packet from the network
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6364
+        Wrong reference counting in the UDR trigger sample
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6360
+        Engine may hang due to races when starting the crypt thread and simultaneous shutdown
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6358
+        Adding NOT NULL column with DEFAULT value may cause default values to be volatile or have the wrong charset
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6351
+        Inter-dependent computed fields could be wrongly evaluated as NULL in some cases
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6348
+        Wire compression causes server freezes
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+    * Bugfix CORE-6347
+        New connections to the server sometimes stall, when there is an existing connection to the database
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6346
+        New connection to the server hangs
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6340
+        Alternate quoting does not work on some particular cases
+      Contributor(s):
+        Adriano dos Santos Fernandes <adrianosf at gmail.com>
+
+    * Bugfix CORE-6253
+        Server may crash sue to the locked fb_lock file
+      Contributor(s):
+        Vlad Khorsun <hvlad at users.sourceforge.net>
+
+    * Bugfix CORE-6147
+        Script with extracted (using isql -x) metadata may fail creating the global mapping
+      Contributor(s):
+        Alex Peshkov <peshkoff at mail.ru>
+
+
+  **************************
   * v3.0.6
   **************************
 

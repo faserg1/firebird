@@ -416,6 +416,7 @@ void getUniqueFileId(HANDLE fd, UCharBuffer& id)
 		char pathbuf[MAX_PATH + 1];
 		DWORD res = fnGetFinalPathNameByHandle(fd,
 			pathbuf, sizeof(pathbuf), VOLUME_NAME_GUID);
+
 		if (res && res < sizeof(pathbuf))
 		{
 			string path(pathbuf);
@@ -465,8 +466,7 @@ void getUniqueFileId(HANDLE fd, UCharBuffer& id)
 				}
 			}
 		}
-
-		if (!res && GetLastError() == ERROR_PATH_NOT_FOUND)
+		else if (!res && GetLastError() == ERROR_PATH_NOT_FOUND)
 		{
 			res = fnGetFinalPathNameByHandle(fd,
 				pathbuf, sizeof(pathbuf), VOLUME_NAME_DOS);
@@ -501,6 +501,9 @@ void getUniqueFileId(HANDLE fd, UCharBuffer& id)
 				}
 			}
 		}
+
+		if (id.isEmpty())
+			system_call_failed::raise("GetFinalPathNameByHandle");
 	}
 
 	if (fnGetFileInformationByHandleEx)
@@ -522,6 +525,9 @@ void getUniqueFileId(HANDLE fd, UCharBuffer& id)
 
 			return;
 		}
+
+		if (GetLastError() != ERROR_INVALID_PARAMETER)
+			system_call_failed::raise("GetFileInformationByHandleEx");
 	}
 
 	// This function returns the volume serial number and 64-bit file ID.
