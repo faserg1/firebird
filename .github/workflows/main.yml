@@ -5,6 +5,7 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
 
     strategy:
       fail-fast: false
@@ -14,7 +15,7 @@ jobs:
         os: [macOS-latest, windows-2016]
         platform: [x64, x86]
         include:
-          - os: ubuntu-16.04
+          - os: ubuntu-18.04
             platform: x64
             container: alpine
         exclude:
@@ -41,13 +42,13 @@ jobs:
         make dist
         tar xzvf gen/Firebird-[0-9]*.tar.gz
         (cd Firebird-[0-9]*; sudo ./install.sh -silent)
-		
+
     - name: Prepare (Linux, Alpine)
-      if: matrix.os == 'ubuntu-16.04' && matrix.container == 'alpine'
+      if: matrix.os == 'ubuntu-18.04' && matrix.container == 'alpine'
       run: apk update && apk --no-cache --update add build-base libtool git autoconf automake zlib-dev icu-dev ncurses-dev libedit-dev linux-headers tar
 
     - name: Build (Linux, Alpine)
-      if: matrix.os == 'ubuntu-16.04' && matrix.container == 'alpine'
+      if: matrix.os == 'ubuntu-18.04' && matrix.container == 'alpine'
       run: |
         ./autogen.sh --enable-binreloc-threads --with-builtin-tomcrypt -with-builtin-tommath --prefix=/opt/firebird
         make -j4
@@ -144,9 +145,9 @@ jobs:
       with:
         name: firebird-linux
         path: gen/Firebird-[0-9]*.tar.gz
-		
+
     - name: Upload (Linux, Alpine)
-      if: matrix.os == 'ubuntu-16.04' && matrix.container == 'alpine'
+      if: matrix.os == 'ubuntu-18.04' && matrix.container == 'alpine'
       uses: actions/upload-artifact@master
       with:
         name: firebird-linux-alpine
