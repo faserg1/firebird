@@ -13,6 +13,10 @@ jobs:
         #os: [macOS-latest, windows-2016, ubuntu-16.04]
         os: [macOS-latest, windows-2016]
         platform: [x64, x86]
+        include:
+          - os: ubuntu-16.04
+            platform: x64
+            container: alpine
         exclude:
           - os: macOS-latest
             platform: x86
@@ -25,18 +29,30 @@ jobs:
         fetch-depth: 10
 
     - name: Prepare (Linux)
-      if: matrix.os == 'ubuntu-16.04'
+      if: matrix.os == 'ubuntu-16.04' && matrix.container != 'alpine'
       run: |
         sudo apt-get install libtool-bin libtommath0 libtommath-dev libicu-dev zlib1g-dev
 
     - name: Build (Linux)
-      if: matrix.os == 'ubuntu-16.04'
+      if: matrix.os == 'ubuntu-16.04' && matrix.container != 'alpine'
       run: |
         CC=clang CXX=clang++ ./autogen.sh --enable-binreloc --with-builtin-tomcrypt --prefix=/opt/firebird
         make
         make dist
         tar xzvf gen/Firebird-[0-9]*.tar.gz
         (cd Firebird-[0-9]*; sudo ./install.sh -silent)
+		
+    - name: Prepare (Linux, Alpine)
+      if: matrix.os == 'ubuntu-16.04' && matrix.container == 'alpine'
+      run: apk update && apk --no-cache --update add build-base libtool git autoconf automake zlib-dev icu-dev ncurses-dev libedit-dev linux-headers tar
+
+    - name: Build (Linux, Alpine)
+      if: matrix.os == 'ubuntu-16.04' && matrix.container == 'alpine'
+      run: |
+        ./autogen.sh --enable-binreloc-threads --with-builtin-tomcrypt -with-builtin-tommath --prefix=/opt/firebird
+        make -j4
+        make dist
+        tar xzvf gen/Firebird-[0-9]*.tar.gz
 
     - name: Prepare (MacOS)
       if: matrix.os == 'macOS-latest'
@@ -123,10 +139,17 @@ jobs:
         run_all.bat JUSTBUILD
 
     - name: Upload (Linux)
-      if: matrix.os == 'ubuntu-16.04'
+      if: matrix.os == 'ubuntu-16.04' && matrix.container != 'alpine'
       uses: actions/upload-artifact@master
       with:
         name: firebird-linux
+        path: gen/Firebird-[0-9]*.tar.gz
+		
+    - name: Upload (Linux, Alpine)
+      if: matrix.os == 'ubuntu-16.04' && matrix.container == 'alpine'
+      uses: actions/upload-artifact@master
+      with:
+        name: firebird-linux-alpine
         path: gen/Firebird-[0-9]*.tar.gz
 
     - name: Upload (MacOS)
