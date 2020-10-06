@@ -30,6 +30,7 @@
 #define CLASSES_FPE_CONTROL_H
 
 #include <math.h>
+#include <cmath>
 #if defined(WIN_NT)
 #include <float.h>
 #else
@@ -213,8 +214,16 @@ private:
 
 };
 
-} //namespace Firebird
 
+inline bool isNegativeInf(double x)
+{
+#ifdef WIN_NT
+	return _fpclass(x) == _FPCLASS_NINF;
+#else
+	return x == -INFINITY;
+#endif
+}
+} //namespace Firebird
 
 // getting a portable isinf() is harder than you would expect
 #ifdef WIN_NT
@@ -222,25 +231,8 @@ inline bool isinf(double x)
 {
 	return (!_finite (x) && !isnan(x));
 }
-#elif !defined(DARWIN)
-#if !defined (isinf) && !defined(_GLIBCXX_CMATH)
-template <typename F>
-inline bool isinf(F x)
-{
-	return !isnan(x) && isnan(x - x);
-}
-#endif // isinf
-#endif // WIN_NT
-
-namespace Firebird {
-	inline bool isNegativeInf(double x)
-	{
-#ifdef WIN_NT
-		return _fpclass(x) == _FPCLASS_NINF;
 #else
-		return x == -INFINITY;
-#endif
-	}
-}
+using std::isinf;
+#endif // WIN_NT
 
 #endif //CLASSES_FPE_CONTROL_H
