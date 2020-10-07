@@ -666,6 +666,7 @@ tzdata: $(FIREBIRD)/tzdata
 
 # FIXME: For big-endian, be.zip must be used.
 $(FIREBIRD)/tzdata: $(ROOT)/extern/icu/tzdata/le.zip
+	mkdir -p $(FIREBIRD)/tzdata
 	unzip -o $(ROOT)/extern/icu/tzdata/le.zip -d $(FIREBIRD)/tzdata
 
 $(BUILD_FILE):	$(BUILD_Objects) $(COMMON_LIB)
