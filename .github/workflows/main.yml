@@ -48,7 +48,7 @@ jobs:
     - name: Build (Linux, Alpine)
       if: matrix.os == 'ubuntu-18.04' && matrix.container == 'alpine'
       run: |
-        ./autogen.sh --enable-binreloc-threads --with-builtin-tommath --prefix=/opt/firebird
+        ./autogen.sh --enable-binreloc-threads --with-builtin-tommath --with-builtin-tomcrypt --prefix=/opt/firebird
         make -j4
         make dist
         tar xzvf gen/Firebird-[0-9]*.tar.gz
